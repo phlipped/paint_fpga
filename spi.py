@@ -18,24 +18,33 @@ class Spi(Module):
     data_out_ready: Signal 1 x out
   '''
   def __init__(self, spi_clk, ss, mosi, miso, data_in, data_in_ready):
-    word_size = len(data_in)
-    bit_count = Signal(max=word_size) # Count number of bits transferred
-    input_buf = Signal(word_size)
+    self.spi_clk = spi_clk
+    self.ss = ss
+    self.mosi = mosi
+    self.miso = miso
+    self.data_in = data_in
+    self.data_in_ready = data_in_ready
 
-    spi_clk_rising = Signal()
+    ################################
+
+
+    word_size = len(data_in)
+    self.bit_count = bit_count = Signal(max=word_size) # Count number of bits transferred
+    self.input_buf = input_buf = Signal(word_size)
+
+    self.spi_clk_rising = spi_clk_rising = Signal()
     self.submodules.spi_edge = EdgeDetect(spi_clk, spi_clk_rising)
 
     # When ss is low (active), that's when we do our work.
     # Otherwise, ss is high, so we continuously assert a 'reset' state.
     self.sync += If(~ss,
                     If(spi_clk_rising,
+                       bit_count.eq(bit_count + 1), # Auto wrap around, right?
                        # Count the number of bits we've received
-                       If(bit_count == word_size - 1, # Wrap around when we hit the top
-                          bit_count.eq(0),
-
+                       If(bit_count == word_size - 1,
                           # This next bit is ugly - we are duplicating the
                           # logic that loads input_buf. But it is necessary to
-                          # get the data exposed on data_in
+                          # get the data exposed on data_in at the right time
                           # Instead, we might be able to achieve something
                           # better by using non-sync logic
                           # to wire data_in to input_buf but only if
@@ -45,8 +54,6 @@ class Spi(Module):
                           # Reader of data_in is expected to clear data_in_ready
                           # after they've read the value from data_in.
                           data_in_ready.eq(1)
-                       ).Else(
-                           bit_count.eq(bit_count + 1)
                        ),
 
                        # Shift the data into the input_buf
@@ -61,4 +68,3 @@ class Spi(Module):
                         data_in.eq(0),
                         bit_count.eq(0),
                     )
-

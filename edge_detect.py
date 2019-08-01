@@ -31,7 +31,8 @@ class EdgeDetect(Module):
 
     ###
 
-    buf = Signal(buf_depth)
+    self.buf = buf = Signal(buf_depth)
+    
     self.sync += buf.eq(Cat(sig, buf[0:-1]))
     if rising is not None:
       self.sync += self.rising.eq(buf[-2:] == 0b01)
