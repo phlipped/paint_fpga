@@ -25,9 +25,9 @@ class BlinkySpi(Module):
                      blink_rate.eq(spi_data)),
                   counter.eq(counter + 1),
                   If(counter == blink_rate,
-                     blink_out.eq(1)),
-                  If(counter == 0,
-                     blink_out.eq(0)))
+                     blink_out.eq(1)).Else(
+                     If(counter == 0,
+                        blink_out.eq(0))))
 
 
 if __name__ == '__main__':
