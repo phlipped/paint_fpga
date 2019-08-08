@@ -1,40 +1,43 @@
-from migen import *
+from nmigen import *
+from nmigen.cli import main
 
-class EdgeDetect(Module):
-  '''EdgeDetect Module.
+class EdgeDetect(Elaboratable):
+    '''EdgeDetect Module.
 
-  Generates a pulse when a rising and/or falling edge is detected on some
-  input signal.
+    Generates a pulse when a rising and/or falling edge is detected on some
+    input signal.
 
-  Edge detection is implemented by marshalling the input signal <sig> through a
-  shift register and comparing the two bits at the 'end' of the shift register
-  to 0b01 (rising) or 0b10 (falling).
+    Edge detection is implemented by marshalling the input signal through a
+    shift register and comparing the two bits at the 'end' of the shift register
+    to 0b01 (rising) or 0b10 (falling).
 
-  The resulting rising/falling pulse will be delayed behind the actual edge,
-  with larger buffer depths leading to larger delays. The average delay (in
-  clock-widths) can be calculated with: (buf_depth - 1) + 0.5
+    The resulting rising/falling pulse will be delayed behind the actual edge,
+    with larger buffer depths leading to larger delays. The average delay (in
+    clock-widths) can be calculated with: (buf_depth - 1) + 0.5
 
-  Signal Args:
-    sig: Signal 1 x in
-    rising: Signal 1 x out, or None/False to disable
-    falling: Signal 1 x out, or None/False to disable
+    Args:
+      rising: Whether to create a signal on the rising edge
+      falling: Whether to create a signal on the falling edge
+      buf_depth: Depth of shift register buffer, default 3
+    '''
+    def __init__(self, rising=False, falling=False, buf_depth=3):
+        self.sig = Signal()
+        self.rising = Signal() if rising else None
+        self.falling = Signal() if falling else None
 
-  Control Args:
-    buf_depth: Depth of shift register buffer, default 3
-  '''
+        ###
 
+        self.buf = Signal(buf_depth)
 
+    def elaborate(self, platform):
+        m = Module()
+        m.d.sync += self.buf.eq(Cat(self.sig, self.buf[0:-1]))
+        if self.rising is not None:
+            m.d.sync += self.rising.eq(self.buf[-2:] == 0b01)
+        if self.falling is not None:
+            m.d.sync += self.falling.eq(self.buf[-2:] == 0b10)
+        return m
 
-  def __init__(self, sig, rising=None, falling=None, buf_depth=3):
-    self.rising = rising
-    self.falling = falling
-
-    ###
-
-    self.buf = buf = Signal(buf_depth)
-    
-    self.sync += buf.eq(Cat(sig, buf[0:-1]))
-    if rising is not None:
-      self.sync += self.rising.eq(buf[-2:] == 0b01)
-    if falling is not None:
-      self.sync += self.falling.eq(buf[-2:] == 0b10)
+if __name__ == '__main__':
+    ed = EdgeDetect(rising=True)
+    main(ed, ports=[ed.sig, ed.rising])
