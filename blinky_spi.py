@@ -9,16 +9,20 @@ class BlinkySpi(Elaboratable):
         self.ss = Signal()
         self.mosi = mosi = Signal()
         self.blink_out = Signal()
+        self.spi_clk = Signal()
 
     def elaborate(self, platform):
         m = Module()
         m.submodules.spi = spi = Spi()
-        spi_data_in = Signal.like(spi.in_reg)
-        spi_data_ready = Signal.like(spi.in_reg_ready)
+        m.d.comb += spi.spi_clk.clk.eq(self.spi_clk)
+        spi.ss = self.ss
+        spi.mosi = self.mosi
+        spi_data_in = Signal(spi.in_reg.shape())
+        spi_data_ready = Signal(spi.in_reg_ready.shape())
         m.submodules += MultiReg(Cat(spi.in_reg, spi.in_reg_ready), Cat(spi_data_in, spi_data_ready))
 
-        blink_rate = Signal.like(spi_data_in)  # The value received from SPI
-        counter = Signal.like(spi_data_in)  # Sweeping counter used to compare to blink_rate
+        blink_rate = Signal(spi_data_in.shape())  # The value received from SPI
+        counter = Signal(spi_data_in.shape())  # Sweeping counter used to compare to blink_rate
 
         # Update blink rate from spi_data
         with m.If(spi_data_ready == 1):
@@ -36,4 +40,4 @@ class BlinkySpi(Elaboratable):
 
 if __name__ == '__main__':
   blinky_spi = BlinkySpi()
-  main(blinky_spi, ports=[blinky_spi.ss, blinky_spi.mosi, blinky_spi.blink_out])
+  main(blinky_spi, ports=[blinky_spi.spi_clk, blinky_spi.ss, blinky_spi.mosi, blinky_spi.blink_out])

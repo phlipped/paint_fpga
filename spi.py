@@ -4,6 +4,7 @@ from nmigen.cli import main
 class Spi(Elaboratable):
     '''Basic Spi Module.'''
     def __init__(self, width=8):
+        self.spi_clk = ClockDomain()
         self.ss = Signal()  # FIXME make reset inverted?
         self.mosi = mosi = Signal()
         self.miso = miso = Signal()
@@ -12,7 +13,7 @@ class Spi(Elaboratable):
 
     def elaborate(self, platform):
         m = Module()
-        m.domains.spi = ClockDomain()
+        m.domains.spi = self.spi_clk
         in_buf = Signal.like(self.in_reg)
         bit_count = Signal(max=len(in_buf))
 
