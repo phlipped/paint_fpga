@@ -13,22 +13,24 @@ class Spi(Elaboratable):
     def elaborate(self, platform):
         m = Module()
         m.domains.spi = ClockDomain()
-        bit_count = Signal(max=len(self.in_reg))
+        in_buf = Signal.like(self.in_reg)
+        bit_count = Signal(max=len(in_buf))
 
         with m.If(~self.ss):
-            m.d.spi += bit_count.eq(bit_count + 1)  # Auto wrap around, right?
-            with m.If(bit_count == (2**(len(bit_count)) - 1)):  # FIXME better way to do this?
-                # Reader of in_reg is expected to clear in_reg_ready after
-                # they've read the value from in_reg.
-                m.d.spi += self.in_reg_ready.eq(1)
-            m.d.spi += self.in_reg.eq(Cat(self.mosi, self.in_reg[:-1]))
+            m.d.spi += bit_count.eq(bit_count + 1)  # Auto wraps around, right?
+            with m.If(bit_count == (2**(len(bit_count)) - 1)):
+                m.d.spi += (self.in_reg_ready.eq(1),
+                            self.in_reg.eq(in_buf))
+            with m.Else():
+                m.d.spi += self.in_reg_ready.eq(0)
+            m.d.spi += in_buf.eq(Cat(self.mosi, in_buf[:-1]))
         with m.Else():
-            # ss is high, so we should just reset everything. FIXME try to
-            # re-use built-in reset to achieve this? which would automatically
-            # propogate to our submodules (right?)
-            m.d.spi += self.in_reg.eq(0)
-            m.d.spi += self.in_reg_ready.eq(0)
-            m.d.spi += bit_count.eq(0)
+            # ss is high, so we should just reset everything.
+            # FIXME try to re-use built-in reset to achieve this?
+            m.d.spi += (in_buf.eq(0),
+                        self.in_reg.eq(0),
+                        self.in_reg_ready.eq(0),
+                        bit_count.eq(0))
         return m
 
 if __name__ == '__main__':
