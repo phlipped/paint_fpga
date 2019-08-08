@@ -13,23 +13,31 @@ class BlinkySpi(Elaboratable):
 
     def elaborate(self, platform):
         m = Module()
+
         m.submodules.spi = spi = Spi()
-        m.d.comb += spi.spi_clk.clk.eq(self.spi_clk)
+
+        # Align the external clock signal to the internal clock
+        # Assumes that the external clock is much slower than internal clock
+        # Use the aligned signal to drive the spi submodule
+        spi_clk_aligned = Signal(3)
+        m.d.sync += spi_clk_aligned.eq(Cat(self.spi_clk, spi_clk_aligned[:-1]))
+        m.d.comb += spi.spi_clk.clk.eq(spi_clk_aligned[-1])
+
+        # Hook up the ss and mosi signals to the spi module
         spi.ss = self.ss
         spi.mosi = self.mosi
-        spi_data_in = Signal(spi.in_reg.shape())
-        spi_data_ready = Signal(spi.in_reg_ready.shape())
-        m.submodules += MultiReg(Cat(spi.in_reg, spi.in_reg_ready), Cat(spi_data_in, spi_data_ready))
 
-        blink_rate = Signal(spi_data_in.shape())  # The value received from SPI
-        counter = Signal(spi_data_in.shape())  # Sweeping counter used to compare to blink_rate
+        blink_rate = Signal(spi.in_reg.shape())
+        counter = Signal(spi.in_reg.shape())  # Sweeping counter used to compare to blink_rate
 
         # Update blink rate from spi_data
-        with m.If(spi_data_ready == 1):
-            m.d.sync += blink_rate.eq(spi_data_in)
+        with m.If(spi.in_reg_ready == 1):
+            m.d.sync += blink_rate.eq(spi.in_reg)
 
+        # Increment the counter
         m.d.sync += counter.eq(counter + 1)
 
+        # Compare counter to blink_rate and 0, set blink_out accordingly
         with m.If(counter == blink_rate):
             m.d.sync += self.blink_out.eq(1)
         with m.Else():
