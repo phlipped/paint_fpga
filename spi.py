@@ -1,7 +1,7 @@
 from nmigen import *
 from nmigen.cli import main
 
-class Spi(Module):
+class Spi(Elaboratable):
     '''Basic Spi Module.'''
     def __init__(self, width=8):
         self.ss = Signal()  # FIXME make reset inverted?
