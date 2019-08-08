@@ -1,70 +1,44 @@
-from migen import *
+from nmigen import *
+from nmigen.cli import main
 from edge_detect import EdgeDetect
 
 class Spi(Module):
-  '''Basic Spi Module.
+    '''Basic Spi Module.'''
+    def __init__(self, width=8):
+        self.spi_clk = Signal()
+        self.ss = Signal()  # FIXME make reset inverted?
+        self.mosi = mosi = Signal()
+        self.miso = miso = Signal()
+        self.in_reg = Signal(width)
+        self.in_reg_ready = Signal()
 
-  Signal Args:
-    spi_clk: Signal 1 x in
-    ss: Signal 1 x in, Acive LOW
-    mosi: Signal 1 x in
-    miso: Signal 1 x out
-    data_in: Signal n x in/out
-    data_in_ready: Signal 1 x in/out (set internally when a full word has been received. The use of this Spi Module is needs to clear data_in_ready when they've read the word from data_in
+    def elaborate(self, platform):
+        m = Module()
 
-  Not Yet implemented:
-    miso: Signal 1 x out
-    data_out: Signal n x out
-    data_out_ready: Signal 1 x out
-  '''
-  def __init__(self, spi_clk, ss, mosi, miso, data_in, data_in_ready):
-    self.spi_clk = spi_clk
-    self.ss = ss
-    self.mosi = mosi
-    self.miso = miso
-    self.data_in = data_in
-    self.data_in_ready = data_in_ready
+        m.submodules.spi_edge = spi_edge = EdgeDetect(rising = True)
+        spi_edge.sig = self.spi_clk
 
-    ################################
+        spi_clk_rising = spi_edge.rising
+        bit_count = Signal(max=len(self.in_reg))
 
+        with m.If(~self.ss):
+            with m.If(spi_clk_rising):
+                m.d.sync += bit_count.eq(bit_count + 1),  # Auto wrap around, right?
+                with m.If(bit_count == len(self.in_reg) - 1):  # FIXME better to check if bit_count is at it's own max value? just not sure how to do that
+                    # Reader of in_reg is expected to clear data_in_ready after
+                    # they've read the value from in_reg.
+                    m.d.sync += self.in_reg_ready.eq(1)
+                m.d.sync += self.in_reg.eq(Cat(self.mosi, self.in_reg[:-1]))
+        with m.Else():
+            # ss is high, so we should just reset everything. FIXME try to
+            # re-use built-in reset to achieve this? which would automatically
+            # propogate to our submodules (right?) FIXME reset our edge_detect
+            # module
+            m.d.sync += self.in_reg.eq(0)
+            m.d.sync += self.in_reg_ready.eq(0)
+            m.d.sync += bit_count.eq(0)
+        return m
 
-    word_size = len(data_in)
-    self.bit_count = bit_count = Signal(max=word_size) # Count number of bits transferred
-    self.input_buf = input_buf = Signal(word_size)
-
-    self.spi_clk_rising = spi_clk_rising = Signal()
-    self.submodules.spi_edge = EdgeDetect(spi_clk, spi_clk_rising)
-
-    # When ss is low (active), that's when we do our work.
-    # Otherwise, ss is high, so we continuously assert a 'reset' state.
-    self.sync += If(~ss,
-                    If(spi_clk_rising,
-                       bit_count.eq(bit_count + 1), # Auto wrap around, right?
-                       # Count the number of bits we've received
-                       If(bit_count == word_size - 1,
-                          # This next bit is ugly - we are duplicating the
-                          # logic that loads input_buf. But it is necessary to
-                          # get the data exposed on data_in at the right time
-                          # Instead, we might be able to achieve something
-                          # better by using non-sync logic
-                          # to wire data_in to input_buf but only if
-                          # data_in_ready is eq(0)
-                          data_in.eq(Cat(mosi, input_buf[:-1])),
-
-                          # Reader of data_in is expected to clear data_in_ready
-                          # after they've read the value from data_in.
-                          data_in_ready.eq(1)
-                       ),
-
-                       # Shift the data into the input_buf
-                       input_buf.eq(Cat(mosi, input_buf[:-1])),
-                      ),
-                    ).Else (  # ss is high, so we should just reset everything.
-                        # FIXME try to re-use built-in reset to achieve this?
-                        # which would automatically propogate to our submodules (right?)
-                        # FIXME reset our edge_detect module
-                        input_buf.eq(0),
-                        data_in_ready.eq(0),
-                        data_in.eq(0),
-                        bit_count.eq(0),
-                    )
+if __name__ == '__main__':
+    spi = Spi(8)
+    main(spi, ports=[spi.spi_clk, spi.ss, spi.mosi, spi.miso, spi.in_reg, spi.in_reg_ready])
