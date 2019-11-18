@@ -1,8 +1,18 @@
 from nmigen import *
-from nmigen.cli import main
+from nmigen_boards import tinyfpga_bx
+from nmigen.build import *
 
-class Spi(Elaboratable):
-    '''Basic Spi Module.'''
+from spi import Spi
+
+extensions = [
+     Resource('spi_port', 0,
+              Subsignal('spi_clk', Pins("A2", dir="i"), Clock(16e6), Attrs(IO_STANDARD="SB_LVCMOS33")),
+              Subsignal("ss", Pins("A1", dir="i")),
+              Subsignal("mosi", Pins("B1", dir="i")),
+              Attrs(IO_STANDARD="SB_LVCMOS33")),
+]
+
+class SpiTiny(Elaboratable):
     def __init__(self, width=8):
         self.spi_clk_src = Signal()
         self.ss = Signal()  # FIXME make reset inverted?
@@ -13,18 +23,14 @@ class Spi(Elaboratable):
 
     def elaborate(self, platform):
         m = Module()
-        m.d.domains.sync = ClockDomain()
-        m.d.domains.spi = ClockDomain()
 
-        # align the incoming spi_clk signal using a Multireg
-        # spi_clk_aligned = Signal(3)
-        # m.d.sync += spi_clk_aligned.eq(Cat(self.spi_clk, spi_clk_aligned[:-1]))
-        # m.submodules.clock_aligner = MultiReg(self.spi_clk, spi_clk_aligned, odomain="spiblerg")
+        m.domains.sync = ClockDomain()
+        m.domains.spi = ClockDomain()
 
         # Drive the spi_domain clock using the aligned spi clock
-        m.d.comb += m.d.spi.clk.eq(self.spi_clk_src)
+        m.d.comb += ClockSignal("spi").eq(self.spi_clk_src)
 
-        bit_count = Signal(max=len(self.in_reg))
+        bit_count = Signal(range(0, len(self.in_reg)))
 
         with m.If(~self.ss):
             # Increment counter
@@ -46,6 +52,19 @@ class Spi(Elaboratable):
                         bit_count.eq(0))
         return m
 
-if __name__ == '__main__':
-    spi = Spi(8)
-    main(spi, ports=[spi.ss, spi.mosi, spi.miso, spi.in_reg, spi.in_reg_ready])
+class SpiTinyFPGA(Elaboratable):
+    def elaborate(self, platform):
+        m = Module()
+        # Disable USB by disabling by setting its pullup to 0
+        usbpu = platform.request("usb").pullup
+        m.d.comb += usbpu.eq(0)
+
+        m.submodules += SpiTiny()
+
+        return m
+
+if __name__ == "__main__":
+    plat = tinyfpga_bx.TinyFPGABXPlatform()
+    plat.add_resources(extensions)
+    # import pudb; pudb.set_trace()
+    plat.build(SpiTinyFPGA(), do_program=True)
