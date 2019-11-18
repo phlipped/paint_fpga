@@ -7,12 +7,12 @@ class EdgeDetect(Elaboratable):
     Generates a pulse when a rising and/or falling edge is detected on some
     input signal.
 
-    Edge detection is implemented by marshalling the input signal through a
+    Edge detection is implemented by forwarding the input signal through a
     shift register and comparing the two bits at the 'end' of the shift register
     to 0b01 (rising) or 0b10 (falling).
 
-    The resulting rising/falling pulse will be delayed behind the actual edge,
-    with larger buffer depths leading to larger delays. The average delay (in
+    The output pulse will be delayed behind the original edge - the delay is
+    proportional to the buffer depth, The average delay (in
     clock-widths) can be calculated with: (buf_depth - 1) + 0.5
 
     Args:

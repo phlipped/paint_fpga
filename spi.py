@@ -16,11 +16,6 @@ class Spi(Elaboratable):
         m.d.domains.sync = ClockDomain()
         m.d.domains.spi = ClockDomain()
 
-        # align the incoming spi_clk signal using a Multireg
-        # spi_clk_aligned = Signal(3)
-        # m.d.sync += spi_clk_aligned.eq(Cat(self.spi_clk, spi_clk_aligned[:-1]))
-        # m.submodules.clock_aligner = MultiReg(self.spi_clk, spi_clk_aligned, odomain="spiblerg")
-
         # Drive the spi_domain clock using the aligned spi clock
         m.d.comb += m.d.spi.clk.eq(self.spi_clk_src)
 
