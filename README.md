@@ -10,4 +10,7 @@
   - define the IO interface so they it can be used by other modules
   - although getting SPI cross domain clocking should probably be worked out
     first
+    - UPDATE: There's been a successful test of external clock as well as
+    clock domain crossing - over in cdc_testing branch. Still a small amount
+    of work to do before that line of investigation can be closed off.
 - Start working on paint_control.py, using the spi.py and motor.py modules
