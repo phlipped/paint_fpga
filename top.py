@@ -19,11 +19,12 @@ class Top(Elaboratable):
     led = platform.request('led')
     main_clock_out = platform.request('main_clock_out')
     counter = Signal(22)
+    flops_from_ext = Signal(3)
 
     m.d.sync += [counter.eq(counter + 1),
-                 #sub_counter_buf[0].eq(ext.count),
-                 #sub_counter_buf[1:].eq(sub_counter_buf[:-1]),
-                 led.eq(ext.count[-1]),]
+                 flops_from_ext[0].eq(ext.count),
+                 flops_from_ext[1:].eq(flops_from_ext[:-1]),
+                 led.eq(flops_from_ext[-1]),]
 
     # Bind 5 bits of main_clock_out to the bottom 5 bits of self.counter
     m.d.comb += [main_clock_out.eq(counter[:4])]
@@ -33,4 +34,4 @@ class Top(Elaboratable):
 if __name__ == '__main__':
   plat = tinyfpga_bx.TinyFPGABXPlatform()
   plat.add_resources(extensions)
-  plat.build(Top(), do_program=True)
+  plat.build(Top(), do_program=False)

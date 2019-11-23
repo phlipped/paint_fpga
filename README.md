@@ -1,16 +1,29 @@
-# What's happening here
+# What's the high level goal of this branch
 Experimenting with all the custom clock stuff for the SPI module
  - driving a clock from an external GPIO
  - passing signals to some other clock domain
   - does it matter which one's faster?
 
 # What just happened
-## Key Insight
+Previous commit was the main success. This commit just adds a string
+of flops between the submodule and the top module.
+
+# Key Insight
 need to use "ClockSignal(<clock_domain>)" to get the relevant
 clock, and bind it to some other signal in a m.d.comb block - look inside
 ext_counter.py for hints.
 
-## What's here?
+# So what are the details of what's happening?
+- Two modules - top.py and ext_counter.py - top.py contains ext_counter.py as a
+  submodule
+- top.py generates a range of slower clock signals and presents them on physically external GPIOs.
+- One of these GPIOs should be jumped to another GPIO that is the input to the
+  ext_counter submodule.
+- The GPIO to the ext_counter submodule drives the clock of that submodule.
+- ext_counter has a counter
+- top.py uses the highest significant bit of that counter to drive a led
+
+# In other words 1
 - in top.py:
  - contains a simple module that has a 22bit counter that increments
 on the main clock
@@ -29,7 +42,7 @@ on the main clock
 
 By jumping a wire from C2 to one of the other pins, you can control the blink rate
 
-## In other words.
+## In other words 2.
 top.py uses main clock to drive a counter. The LSBs of the counter will therefore
 be clocking up at some divisor of the main clock (1, 2, 4, 8, 16 ...)
 These LSBs are exposed on the external pins of the Teensy at C1 D2 D1 E2.
@@ -43,5 +56,4 @@ By changing which of C1 D2 D1 E2 is jumped to C2, the blink rate of the led can
 be controlled.
 
 ## What's next
-- Put in a buffer between ext_counter and top - ie a string of 3 or so flip flops
-- Experiment with driving the ext clock from something truly external to the system
+- Real-world experiment with driving the ext clock from something truly external to the system
