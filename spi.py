@@ -35,15 +35,16 @@ class ShiftRegisterWithDataReady(ShiftRegister):
     def __init__(self, width):
         super(ShiftRegisterWithDataReady, self).__init__(width)
         self.data_ready = Signal()
+        self.count = Signal(range(0, len(self.reg)))
 
     def elaborate(self, platform):
         m = super(ShiftRegisterWithDataReady, self).elaborate(platform)
-        count = Signal(range(0, len(self.reg)))
 
-        with m.If(count == len(self.reg)):
-            m.d.sync += count.eq(1)
-            m.d.comb += self.data_ready.eq(1)
+        with m.If(self.count == len(self.reg)):
+            m.d.sync += [self.count.eq(1),
+                         self.data_ready.eq(1),]
         with m.Else():
-            m.d.sync += count.eq(count + 1)
+            m.d.sync += [self.count.eq(self.count + 1),
+                         self.data_ready.eq(0),]
 
         return m
