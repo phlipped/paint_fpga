@@ -10,6 +10,12 @@
 
 ## 2019-12-02
 ### What just happened
+- Created basic motor controller combinatorial logic unit, with basic test
+
+### What happens next
+- Create a battery of motor enable controllers?
+
+### What just happened
 - Merged SPI work (see tag archive/spi_core_developemnt)
 
 ### What happens next
