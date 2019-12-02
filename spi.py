@@ -130,10 +130,8 @@ class SpiCore(Elaboratable):
             pass
         return m
 
-
-
 class EdgeDetect(Elaboratable):
-    def __init__(self, depth=4):
+    def __init__(self, depth=2):
       self.i = Signal()
       self.rising = Signal()
       self.falling = Signal()

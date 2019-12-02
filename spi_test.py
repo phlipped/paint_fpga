@@ -53,7 +53,7 @@ class ShiftRegisterWithDataReadyTest(FHDLTestCase):
 
 class EdgeDetectTest(FHDLTestCase):
   def setUp(self):
-    self.dut = EdgeDetect()
+    self.dut = EdgeDetect(4)
 
   def test_rising(self):
     with Simulator(self.dut) as sim:
@@ -147,19 +147,15 @@ class SpiCoreTest(FHDLTestCase):
                 yield
                 for i in range(len(bit_pattern) // self.width):
                     bits = bit_pattern[i*self.width:i*self.width + self.width]
-                    print("bitset #{}: {}".format(i, bits))
                     val = bit_list_to_number(bits)
                     yield self.dut.o_reg.eq(val)
                     yield # load o_reg
                     yield # load o_reg into _o_reg
                     assert ((yield self.dut._o_reg) == (yield self.dut.o_reg))
                     for j in range(self.width):
-                        print("bit: #{} == {}".format(j, bits[j]))
                         expected_miso = yield self.dut._o_reg[-1]
-                        print("expected_miso: {}".format(expected_miso))
                         yield from self.SpiClock()
                         miso = yield self.dut.miso
-                        print("miso: {}".format(miso))
                         assert (miso == expected_miso)
 
             sim.add_sync_process(process())
