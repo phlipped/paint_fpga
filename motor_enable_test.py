@@ -6,7 +6,7 @@ from motor_enable import *
 
 class ShiftRegisterTest(FHDLTestCase):
     def setUp(self):
-        self.dut = MotorEnable()
+        self.dut = MotorEnable(is_test=True)
 
     def test_0(self):
         with open("motor_enable.vcd", "w") as vcd_file, open("motor_enable.gtkw", "w") as gtkw_file, Simulator(
