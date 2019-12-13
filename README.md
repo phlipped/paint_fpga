@@ -8,6 +8,17 @@
 
 # CHANGE LOG
 
+## 2019-12-13
+### What just happened
+- Overhauled SPI module to use a dedicated clock domain - removed the edge
+detect stuff.
+- Overhauled tests - required upgrade to latest nmigen simulator that overcomes
+some deficiencies in the old simulator.
+
+### What happens next
+- Not sure ... I had an idea once, and then I forgot. I feel like it was
+something to do with SPI though.
+
 ## 2019-12-02
 ### What just happened
 - Created basic motor controller combinatorial logic unit, with basic test
