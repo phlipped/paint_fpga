@@ -4,9 +4,11 @@
 the associated limit switches and enable line
 
 ## Up next
-- Make a more advanced SPI module that actually interprets a protocol. Though
-this might require actually having some central logic that the SPI will interact
-with - e.g. addresses/registers to read/write via SPI
+- Perhaps: Make a more advanced SPI module that actually interprets a protocol.
+Though this might require actually having some central logic that the SPI will
+interact with - e.g. addresses/registers to read/write via SPI.
+- Make the step-count logic unit. In particular, the timing and smooth-start
+parts.
 
 # CHANGE LOG
 
