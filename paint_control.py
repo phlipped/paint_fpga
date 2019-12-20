@@ -37,6 +37,8 @@ class PaintControl(Elaboratable):
         ro_registers = []
         rw_registers = []
         self.status = Signal(8)
+        self.reset = Signal()
+        m.d.comb += self.reset.eq(self.status[0])
 
         with m.FSM() as fsm:
             # In all states, at any time, if 'reset' bit is set, go to "START" state
@@ -49,13 +51,14 @@ class PaintControl(Elaboratable):
             # arguably a landmine for the future.
 
             # not sure if needed?
-            # performs a POST
+            # performs a POST?
             # next states
             # - READY -> if POST SUCCEEDS
             # - ERROR -> if POST fails (e.g. end stop switches are bad)
             with m.State("START"):
                 # FIXME actually implement POST - e.g. check the limit switches are happy
-                m.next = "READY"
+                with m.If(self.status[0] == 0):
+                    m.next = "READY"
 
 
             # READY
