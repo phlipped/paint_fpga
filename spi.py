@@ -90,3 +90,71 @@ class SpiCore(Elaboratable):
                 m.d.spi_falling += self.out_count.eq(self.out_count + 1)
                 m.d.spi_falling += [o.eq(i) for i, o in zip((0, *_o_reg), _o_reg)]
         return m
+
+class SpiRegIf(Elaboratable):
+    '''
+    Args:
+      regs: a dictionary of {integer: (Signal(), bool)}, where integer is the
+      'address' that will be used in SPI commands. The bool indicates whether
+      the register is writable from SPI. All registers are readable.
+
+      Writable registers must not be driven by any other processes
+    '''
+    def __init__(self, regs):
+        self.spi_width = self._check_regs(regs)
+        self.spi_clk = Signal()
+        self.ss = Signal()
+        self.mosi = Signal()
+        self.miso = Signal()
+        # FIXME create relevant structures here?
+
+    def _check_regs(self, regs):
+        width = None
+        for addr, (sig, rw) in regs.items():
+            if width is None:
+                width = len(sig)
+            if not isinstance(width, int):
+                raise Exception("bad type for addr - should be int, but found {!r}".format(addr))
+            if not isinstance(rw, bool):
+                raise Exception("bad type for rw - should be bool, but found {!r}".format(rw))
+            if len(sig) != width:
+                raise Exception("bad regs - Signal for addr {} has different width - {} instead of {}".format(addr, len(sig), width))
+        return width
+
+    def elaborate(self, platform):
+        m = Module()
+
+        spi_core = SpiCore(self.width)
+        spi_core.spi_clk = self.spi_clk
+        spi_core.ss = self.ss
+        spi_core.mosi = self.mosi
+        spi_core.miso = self.miso
+        m.submodules += spi_core
+
+        with m.FSM() as fsm:
+            with m.state("START"):
+                pass
+
+            with m.State("WAITING"):
+                # just waiting for Spi Core slave select to go low
+                pass
+
+            with m.state("GET_CMD"):
+                pass
+
+            with m.state("HANDLE_WRITE"):
+                '''
+                ok, so let's assume there is a register somewhere that has an address in it
+                and let's assume we went ahead and received the value we need to write.
+                How do we use the passed in addr to select the appropriate register?
+
+                '''
+                pass
+
+            with m.state("HANDLE_READ"):
+                pass
+
+            with m.state("ERROR"):
+                pass
+
+        return m
