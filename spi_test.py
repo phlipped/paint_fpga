@@ -11,7 +11,7 @@ class SpiCoreTest(FHDLTestCase):
         self.width = 9
         self.dut = SpiCore(self.width)
 
-    def test_dataIn(self):
+    def testDataIn(self):
         sim = Simulator(fragment=self.dut)
         sim.add_clock(1e-6, domain='spi_rising')
         def process():
@@ -34,7 +34,7 @@ class SpiCoreTest(FHDLTestCase):
             "spi_core_test_data_in.gtkw"):
             sim.run()
 
-    def test_dataOut(self):
+    def testDataOut(self):
         bit_pattern = [1, 1, 0, 0, 1, 1, 0, 1, 0, 1,
                        0, 1, 0, 1, 1, 0, 0, 1, 1, 0,]
         words_to_test = len(bit_pattern) // self.width

@@ -131,18 +131,20 @@ class SpiRegIf(Elaboratable):
         spi_core.miso = self.miso
         m.submodules += spi_core
 
-        with m.FSM() as fsm:
-            with m.state("START"):
+        self.status = Signal()
+
+        with m.FSM() as fsm:            
+            with m.State("START"):
                 pass
 
             with m.State("WAITING"):
                 # just waiting for Spi Core slave select to go low
                 pass
 
-            with m.state("GET_CMD"):
+            with m.State("GET_CMD"):
                 pass
 
-            with m.state("HANDLE_WRITE"):
+            with m.State("HANDLE_WRITE"):
                 '''
                 ok, so let's assume there is a register somewhere that has an address in it
                 and let's assume we went ahead and received the value we need to write.
@@ -151,10 +153,10 @@ class SpiRegIf(Elaboratable):
                 '''
                 pass
 
-            with m.state("HANDLE_READ"):
+            with m.State("HANDLE_READ"):
                 pass
 
-            with m.state("ERROR"):
+            with m.State("ERROR"):
                 pass
 
         return m

@@ -1,7 +1,5 @@
 from nmigen import *
 
-from spi import SpiRegIf
-
 '''
 Controlled by a number of configuation and status registers.
 These are readable/writable by SPI
@@ -38,7 +36,7 @@ class PaintControl(Elaboratable):
 
         ro_registers = []
         rw_registers = []
-        spi_if = SpiInterface()
+        self.status = Signal(8)
 
         with m.FSM() as fsm:
             # In all states, at any time, if 'reset' bit is set, go to "START" state
@@ -55,7 +53,7 @@ class PaintControl(Elaboratable):
             # next states
             # - READY -> if POST SUCCEEDS
             # - ERROR -> if POST fails (e.g. end stop switches are bad)
-            with m.state("START"):
+            with m.State("START"):
                 # FIXME actually implement POST - e.g. check the limit switches are happy
                 m.next = "READY"
 
@@ -71,24 +69,36 @@ class PaintControl(Elaboratable):
             # - DISPENSING
             # - HOMING
             # - ERROR
-            with m.state("READY"):
+            with m.State("READY"):
                 # We just react to SPI commands
                 # If the mode bits == 'DISPENSING', go to dispensing mode
                 # If the mode bits == 'HOMING', go to homing mode
-                pass
+                with m.If(self.status[0]):
+                    m.next = "START"
+
+                with m.Else():
+                    pass
             # DISPENSE
             # next states are
             # - READY
             # - ERROR
-            with m.state("DISPENSING"):
-                pass
+            with m.State("DISPENSING"):
+                with m.If(self.status[0]):
+                    m.next = "START"
+
+                with m.Else():
+                    pass
 
             # HOME
             # next states are
             # - READY
             # - ERROR
-            with m.state("HOMING"):
-                pass
+            with m.State("HOMING"):
+                with m.If(self.status[0]):
+                    m.next = "START"
+
+                with m.Else():
+                    pass
 
             # ERROR
             # Entered when unexpected error state occurs
@@ -97,7 +107,11 @@ class PaintControl(Elaboratable):
             # is not considered an error.
             # next states are
             # - READY
-            with m.state("ERROR"):
-                pass
+            with m.State("ERROR"):
+                with m.If(self.status[0]):
+                    m.next = "START"
+
+                with m.Else():
+                    pass
 
         return m
