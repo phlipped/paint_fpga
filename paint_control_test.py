@@ -15,12 +15,12 @@ class PaintControlTest(FHDLTestCase):
         def process():
             yield
             yield
-            yield self.dut.status[0].eq(1)
+            yield self.dut.control[0].eq(1)
             yield
             yield
             yield
             yield
-            yield self.dut.status[0].eq(0)
+            yield self.dut.control[0].eq(0)
             yield
             yield
             yield
