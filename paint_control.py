@@ -1,5 +1,6 @@
 from nmigen import *
 
+from motor_enable import MotorEnable
 '''
 Controlled by a number of configuation and status registers.
 These are readable/writable by SPI
@@ -42,8 +43,15 @@ class PaintControl(Elaboratable):
         self.control = Signal(8)
         self.reset = Signal()
         m.d.comb += self.reset.eq(self.control[0])
-        self.colours_in = 5 * [Signal(32)]
-        self.colours = 5 * [Signal(32)]
+        self.colours_in = []
+        self.colours = []
+        self.motor_enables = []
+        for i in range(5):
+            self.colours_in.append(Signal(32))
+            self.colours.append(Signal(32))
+            motor_enable = MotorEnable()
+            self.motor_enables.append(motor_enable)
+            m.submodules += motor_enable
 
         with m.FSM() as fsm:
             # In all states, at any time, if 'reset' bit is set, go to "START" state
