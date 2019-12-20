@@ -36,9 +36,23 @@ class PaintControl(Elaboratable):
 
         ro_registers = []
         rw_registers = []
+        # 0  : Reset
+        # 1-2: Mode - 01 is dispensing, 10 is homing, 11 is illegal
+        # 3-7: Undefined
         self.control = Signal(8)
         self.reset = Signal()
         m.d.comb += self.reset.eq(self.control[0])
+        self.cyan_in = Signal(16)
+        self.magenta_in = Signal(16)
+        self.yellow_in = Signal(16)
+        self.black_in = Signal(16)
+        self.white_in = Signal(16)
+
+        self.cyan = Signal(16)
+        self.magenta = Signal(16)
+        self.yellow = Signal(16)
+        self.black = Signal(16)
+        self.white = Signal(16)
 
         with m.FSM() as fsm:
             # In all states, at any time, if 'reset' bit is set, go to "START" state
@@ -80,7 +94,25 @@ class PaintControl(Elaboratable):
                     m.next = "START"
 
                 with m.Else():
-                    pass
+                    with m.Switch(self.control[1:3]):
+                        with m.Case(0b01):
+                            m.next = "DISPENSING"
+                        with m.Case(0b10):
+                            m.next = "HOMING"
+                        with m.Case(0b11):
+                            # Illegal case - go to error state
+                            m.next = "ERROR"
+                        with m.Default():
+                            # Case 00 - means don't do anything
+                            pass
+                    # Assign the incoming colors to the registers that we 'll use for coutning down'
+                    m.d.sync += [
+                        self.cyan.eq(self.cyan_in),
+                        self.magenta.eq(self.magenta_in),
+                        self.yellow.eq(self.yellow_in),
+                        self.black.eq(self.black_in),
+                        self.white.eq(self.white_in),
+                    ]
             # DISPENSE
             # next states are
             # - READY
@@ -90,6 +122,12 @@ class PaintControl(Elaboratable):
                     m.next = "START"
 
                 with m.Else():
+                    # If there is an error from the motor module
+                    #     go to ERROR
+                    # Else
+                    #
+                    #     If all counts are at zero
+                    #         Go to state START
                     pass
 
             # HOME
@@ -102,6 +140,7 @@ class PaintControl(Elaboratable):
 
                 with m.Else():
                     pass
+
 
             # ERROR
             # Entered when unexpected error state occurs
