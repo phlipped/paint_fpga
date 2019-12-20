@@ -42,17 +42,8 @@ class PaintControl(Elaboratable):
         self.control = Signal(8)
         self.reset = Signal()
         m.d.comb += self.reset.eq(self.control[0])
-        self.cyan_in = Signal(16)
-        self.magenta_in = Signal(16)
-        self.yellow_in = Signal(16)
-        self.black_in = Signal(16)
-        self.white_in = Signal(16)
-
-        self.cyan = Signal(16)
-        self.magenta = Signal(16)
-        self.yellow = Signal(16)
-        self.black = Signal(16)
-        self.white = Signal(16)
+        self.colours_in = 5 * [Signal(32)]
+        self.colours = 5 * [Signal(32)]
 
         with m.FSM() as fsm:
             # In all states, at any time, if 'reset' bit is set, go to "START" state
@@ -73,7 +64,6 @@ class PaintControl(Elaboratable):
                 # FIXME actually implement POST - e.g. check the limit switches are happy
                 with m.If(self.control[0] == 0):
                     m.next = "READY"
-
 
             # READY
             # state where various values can be set - e.g.
@@ -105,14 +95,9 @@ class PaintControl(Elaboratable):
                         with m.Default():
                             # Case 00 - means don't do anything
                             pass
-                    # Assign the incoming colors to the registers that we 'll use for coutning down'
-                    m.d.sync += [
-                        self.cyan.eq(self.cyan_in),
-                        self.magenta.eq(self.magenta_in),
-                        self.yellow.eq(self.yellow_in),
-                        self.black.eq(self.black_in),
-                        self.white.eq(self.white_in),
-                    ]
+                    # Assign the incoming color values to corresponding writable registers
+                    m.d.sync += [self.colours[i].eq(self.colours_in[i]) for i in range(5)]
+
             # DISPENSE
             # next states are
             # - READY
@@ -125,7 +110,7 @@ class PaintControl(Elaboratable):
                     # If there is an error from the motor module
                     #     go to ERROR
                     # Else
-                    #
+                    #     for each colour register ...
                     #     If all counts are at zero
                     #         Go to state START
                     pass
