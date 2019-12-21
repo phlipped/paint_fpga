@@ -123,10 +123,11 @@ class PaintControl(Elaboratable):
                                   for i in range(len(self.motor_enables))]
                     any_limit_hit = functools.reduce(operator.or_, limit_hits)
                     with m.If(any_limit_hit):
-                            # FIXME set error code
+                        # FIXME set error code
                         m.next = "ERROR"
                     with m.Else():
-                        pass
+                        with m.If(functools.reduce(operator.and_, self.colours) == 0):
+                            m.next = "START"
                     #     for each colour register ...
                     #     If all counts are at zero
                     #         Go to state START
