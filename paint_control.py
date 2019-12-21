@@ -1,3 +1,6 @@
+import functools
+import operator
+
 from nmigen import *
 
 from motor_enable import MotorEnable
@@ -115,13 +118,18 @@ class PaintControl(Elaboratable):
                     m.next = "START"
 
                 with m.Else():
-                    # If there is an error from the motor module
-                    #     go to ERROR
-                    # Else
+                    # If a motor went wrong, then go to ERROR
+                    limit_hits = [self.motor_enables[i].limit_for_direction & self.colours[i] != 0
+                                  for i in range(len(self.motor_enables))]
+                    any_limit_hit = functools.reduce(operator.or_, limit_hits)
+                    with m.If(any_limit_hit):
+                            # FIXME set error code
+                        m.next = "ERROR"
+                    with m.Else():
+                        pass
                     #     for each colour register ...
                     #     If all counts are at zero
                     #         Go to state START
-                    pass
 
             # HOME
             # next states are
