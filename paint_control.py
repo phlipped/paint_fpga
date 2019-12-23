@@ -126,6 +126,7 @@ class PaintControl(Elaboratable):
                         # FIXME set error code
                         m.next = "ERROR"
                     with m.Else():
+                        # FIXME decrement colours on each step pulse
                         with m.If(functools.reduce(operator.and_, self.colours) == 0):
                             m.next = "START"
                     #     for each colour register ...

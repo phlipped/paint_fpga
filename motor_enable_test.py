@@ -4,7 +4,7 @@ from nmigen.back.pysim import *
 
 from motor_enable import *
 
-class ShiftRegisterTest(FHDLTestCase):
+class MoterEnableTest(FHDLTestCase):
     def setUp(self):
         self.dut = MotorEnable(is_test=True)
 
