@@ -1,4 +1,25 @@
 # Current status
+- basic FSM seems to work? Basic test seems to work
+
+
+## Up next
+- FSM general refinements
+ - find a better way to drive the step_signal clk - currently it is driven in comb domain and therefore needs to have its clock source defined in every separate FSM state. Better to have it driven from a Signal that in turn selects the appropriate source?
+ - Address fixmes
+ - Add in SPI module?
+  - Should probably make this an 'outer shell' module that contains the
+  FSM module and drives the FSM by setting register values, and can read
+  status back from the FSM.
+ - General refinements and cleanup
+
+# CHANGE LOG
+
+## 2019-12-28 23:00
+- Expanded the tests for paint_control - can actualy get it into and out of dispensing mode.
+- some bug fixes - previous commit is broken. Can't remember what.
+
+## 2019-12-28 21:00
+### What just happened
 - building out the main paint control module, including ...
  - pulse gen module
  - array of motor_enable modules
@@ -6,17 +27,6 @@
  - wrangling with driving the step registers from different clock sources
   - the solution appears to be to change the clock source for the domain,
   - but this needs to be tested. In particular, I don't want to see spurious steps during the cutover period from one clock source to another.
-
-
-## Up next
-- Write some tests that set values in various registers then move the
-module into the DISPENSING state.
-
-# CHANGE LOG
-
-## 2019-12-28
-### What just happened
-
 
 ## 2019-12-13
 ### What just happened

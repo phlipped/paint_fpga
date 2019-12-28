@@ -105,12 +105,22 @@ class PaintControl(Elaboratable):
 
                 m.d.comb += step_signal.clk.eq(ClockSignal('sync'))
 
+                # FIXME do this properly?
+                # load some basic values into pulse gen module
+                m.d.sync += [
+                    pulse_gen.top.eq(10),
+                    pulse_gen.match.eq(2),
+                ]
+
+                # Assign the incoming color values to corresponding writable registers
+                m.d.step_signal += [o.eq(i) for i, o in zip(self.colours_in, self.colours)]
+
                 with m.If(self.reset):     # If CANCEL bit is set, go back to START
                     m.next = "START"
                 with m.Else():                  # Otherwise, normal case ...
                     with m.Switch(self.control[1:3]):
                         with m.Case(0b01):
-                            m.next = "DISPENSING"
+                            m.next = "DISPENSING_PREP"
                         with m.Case(0b10):
                             m.next = "HOMING"
                         with m.Case(0b11):      # Illegal case - go to error state
@@ -118,18 +128,25 @@ class PaintControl(Elaboratable):
                             m.next = "ERROR"
                         with m.Default():       # Case 00 - means don't do anything
                             pass
-                    # Assign the incoming color values to corresponding writable registers
-                    m.d.sync += [o.eq(i) for i, o in zip(self.colours_in, self.colours)]
+
+            with m.State("DISPENSING_PREP"):
+                # swich step_signal clock source to the pulse gen module
+                m.d.comb += step_signal.clk.eq(pulse_gen.pulse)
+                m.next = "DISPENSING"
 
             # DISPENSE
             # next states are
             # - READY
             # - ERROR
             with m.State("DISPENSING"):
-                # Enable the motors for colours that have steps,
-                # and turn them off when the step count for the colour hits 0
+                # continue driving step_signal from pulse_gen clock
                 m.d.comb += step_signal.clk.eq(pulse_gen.pulse)
 
+                # start the pulse_gen module
+                m.d.sync += pulse_gen.active.eq(1)
+
+                # Enable the motors for colours that have steps,
+                # and turn them off when the step count for the colour hits 0
                 for i, c in enumerate(self.colours):
                     with m.If(c == 0):
                         self.motor_enables[i].enable_i.eq(0)
@@ -138,6 +155,7 @@ class PaintControl(Elaboratable):
 
                 with m.If(self.reset):
                     m.next = "START"
+
                 with m.Else():
                     # If a motor went wrong, then go to ERROR
                     # determine if any limits were hit - store result in any_limit_hit
@@ -149,10 +167,12 @@ class PaintControl(Elaboratable):
                         m.next = "ERROR"
 
                     with m.Else(): # Normal case here
-                        #m.d.step_signal += [c.eq(c - 1) for c in self.colours]
+                        for c in self.colours:
+                            with m.If(c != 0):
+                                m.d.step_signal += c.eq(c-1)
 
                         # If all colours are 0, go to start
-                        with m.If(functools.reduce(operator.and_, self.colours) == 0):
+                        with m.If(functools.reduce(operator.or_, self.colours) == 0):
                             m.next = "START"
 
             # HOME
