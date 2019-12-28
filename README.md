@@ -1,20 +1,26 @@
 # Current status
-- spi core module basically works (I think) and has tests.
-- motor_enable contains the combinatorial logic to handle a single motor and
-the associated limit switches and enable line
+- building out the main paint control module, including ...
+ - pulse gen module
+ - array of motor_enable modules
+ - building finite state machine
+ - wrangling with driving the step registers from different clock sources
+  - the solution appears to be to change the clock source for the domain,
+  - but this needs to be tested. In particular, I don't want to see spurious steps during the cutover period from one clock source to another.
+
 
 ## Up next
-- Perhaps: Make a more advanced SPI module that actually interprets a protocol.
-Though this might require actually having some central logic that the SPI will
-interact with - e.g. addresses/registers to read/write via SPI.
-- Make the step-count logic unit. In particular, the timing and smooth-start
-parts.
+- Write some tests that set values in various registers then move the
+module into the DISPENSING state.
 
 # CHANGE LOG
 
+## 2019-12-28
+### What just happened
+
+
 ## 2019-12-13
 ### What just happened
-- Merg
+- Not sure
 
 ### What happens next
 - Not sure

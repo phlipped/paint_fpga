@@ -4,6 +4,7 @@ import operator
 from nmigen import *
 
 from motor_enable import MotorEnable
+from pulse_gen import PulseGen
 '''
 Controlled by a number of configuation and status registers.
 These are readable/writable by SPI
@@ -56,6 +57,17 @@ class PaintControl(Elaboratable):
             self.motor_enables.append(motor_enable)
             m.submodules += motor_enable
 
+        # Pulse generator used to drive the step signal
+        pulse_gen = PulseGen(16)
+        m.submodules.pulse_gen = pulse_gen
+        m.d.comb += pulse_gen.invert.eq(1)
+
+        # create a clock signal from the PulseGen pulse
+        step_signal = ClockDomain('step_signal')
+        m.domains += step_signal
+
+        # The FSM just reacts to the state of various registers being
+        # written to asynchronously by the SPI module
         with m.FSM() as fsm:
             # In all states, at any time, if 'reset' bit is set, go to "START" state
             # How does this work in terms of determining which state to go to next?
@@ -73,7 +85,7 @@ class PaintControl(Elaboratable):
             # - ERROR -> if POST fails (e.g. end stop switches are bad)
             with m.State("START"):
                 # FIXME actually implement POST - e.g. check the limit switches are happy
-                with m.If(self.control[0] == 0):
+                with m.If(self.reset == 0):
                     m.next = "READY"
 
             # READY
@@ -88,57 +100,67 @@ class PaintControl(Elaboratable):
             # - HOMING
             # - ERROR
             with m.State("READY"):
-                # We just react to SPI commands
                 # If the mode bits == 'DISPENSING', go to dispensing mode
                 # If the mode bits == 'HOMING', go to homing mode
-                with m.If(self.control[0]):
-                    m.next = "START"
 
-                with m.Else():
+                m.d.comb += step_signal.clk.eq(ClockSignal('sync'))
+
+                with m.If(self.reset):     # If CANCEL bit is set, go back to START
+                    m.next = "START"
+                with m.Else():                  # Otherwise, normal case ...
                     with m.Switch(self.control[1:3]):
                         with m.Case(0b01):
                             m.next = "DISPENSING"
                         with m.Case(0b10):
                             m.next = "HOMING"
-                        with m.Case(0b11):
-                            # Illegal case - go to error state
+                        with m.Case(0b11):      # Illegal case - go to error state
+                            # FIXME set error code
                             m.next = "ERROR"
-                        with m.Default():
-                            # Case 00 - means don't do anything
+                        with m.Default():       # Case 00 - means don't do anything
                             pass
                     # Assign the incoming color values to corresponding writable registers
-                    m.d.sync += [self.colours[i].eq(self.colours_in[i]) for i in range(5)]
+                    m.d.sync += [o.eq(i) for i, o in zip(self.colours_in, self.colours)]
 
             # DISPENSE
             # next states are
             # - READY
             # - ERROR
             with m.State("DISPENSING"):
-                with m.If(self.control[0]):
-                    m.next = "START"
+                # Enable the motors for colours that have steps,
+                # and turn them off when the step count for the colour hits 0
+                m.d.comb += step_signal.clk.eq(pulse_gen.pulse)
 
+                for i, c in enumerate(self.colours):
+                    with m.If(c == 0):
+                        self.motor_enables[i].enable_i.eq(0)
+                    with m.Else():
+                        self.motor_enables[i].enable_i.eq(1)
+
+                with m.If(self.reset):
+                    m.next = "START"
                 with m.Else():
                     # If a motor went wrong, then go to ERROR
+                    # determine if any limits were hit - store result in any_limit_hit
                     limit_hits = [self.motor_enables[i].limit_for_direction & self.colours[i] != 0
                                   for i in range(len(self.motor_enables))]
                     any_limit_hit = functools.reduce(operator.or_, limit_hits)
                     with m.If(any_limit_hit):
                         # FIXME set error code
                         m.next = "ERROR"
-                    with m.Else():
-                        # FIXME decrement colours on each step pulse
+
+                    with m.Else(): # Normal case here
+                        #m.d.step_signal += [c.eq(c - 1) for c in self.colours]
+
+                        # If all colours are 0, go to start
                         with m.If(functools.reduce(operator.and_, self.colours) == 0):
                             m.next = "START"
-                    #     for each colour register ...
-                    #     If all counts are at zero
-                    #         Go to state START
 
             # HOME
             # next states are
             # - READY
             # - ERROR
             with m.State("HOMING"):
-                with m.If(self.control[0]):
+                with m.If(self.reset):
                     m.next = "START"
 
                 with m.Else():
