@@ -108,8 +108,8 @@ class PaintControl(Elaboratable):
                 # FIXME do this properly?
                 # load some basic values into pulse gen module
                 m.d.sync += [
-                    pulse_gen.top.eq(10),
-                    pulse_gen.match.eq(2),
+                    pulse_gen.top.eq(100),
+                    pulse_gen.match.eq(16),
                 ]
 
                 # Assign the incoming color values to corresponding writable registers
@@ -132,6 +132,9 @@ class PaintControl(Elaboratable):
             with m.State("DISPENSING_PREP"):
                 # swich step_signal clock source to the pulse gen module
                 m.d.comb += step_signal.clk.eq(pulse_gen.pulse)
+                for i, e in enumerate(self.motor_enables):
+                    with m.If (self.colours[i] != 0):
+                        m.d.sync += e.enable_i.eq(1)
                 m.next = "DISPENSING"
 
             # DISPENSE
@@ -149,9 +152,9 @@ class PaintControl(Elaboratable):
                 # and turn them off when the step count for the colour hits 0
                 for i, c in enumerate(self.colours):
                     with m.If(c == 0):
-                        self.motor_enables[i].enable_i.eq(0)
+                        m.d.sync += self.motor_enables[i].enable_i.eq(0)
                     with m.Else():
-                        self.motor_enables[i].enable_i.eq(1)
+                        m.d.sync += self.motor_enables[i].enable_i.eq(1)
 
                 with m.If(self.reset):
                     m.next = "START"
@@ -172,8 +175,9 @@ class PaintControl(Elaboratable):
                                 m.d.step_signal += c.eq(c-1)
 
                         # If all colours are 0, go to start
+                        # FIXME need to make sure the final step completes first
                         with m.If(functools.reduce(operator.or_, self.colours) == 0):
-                            m.next = "START"
+                            m.next = "DONE"
 
             # HOME
             # next states are
@@ -186,6 +190,9 @@ class PaintControl(Elaboratable):
                 with m.Else():
                     pass
 
+            with m.State("DONE"):
+                with m.If(self.reset):     # If CANCEL bit is set, go back to START
+                    m.next = "START"
 
             # ERROR
             # Entered when unexpected error state occurs
