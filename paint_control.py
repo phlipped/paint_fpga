@@ -152,7 +152,12 @@ class PaintControl(Elaboratable):
                 # and turn them off when the step count for the colour hits 0
                 for i, c in enumerate(self.colours):
                     with m.If(c == 0):
-                        m.d.sync += self.motor_enables[i].enable_i.eq(0)
+                        # Wait until pulse_gen pulse is zero.
+                        # This is a bit hacky - ideally we should wait for 1us
+                        # after the pulse goes low. But I'm guessing the stepper
+                        # motor driver won't care - it should have stepped.
+                        with m.If(pulse_gen.pulse == 0):
+                            m.d.sync += self.motor_enables[i].enable_i.eq(0)
                     with m.Else():
                         m.d.sync += self.motor_enables[i].enable_i.eq(1)
 
