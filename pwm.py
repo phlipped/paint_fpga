@@ -1,9 +1,9 @@
 from nmigen import *
 
-class PulseGen(Elaboratable):
+class Pwm(Elaboratable):
     def __init__(self, width=16):
-        self.pulse = Signal()  # output
-        self._pulse = Signal()
+        self.o = Signal()  # output
+        self._o = Signal()
         self.top = Signal(width)  # max value of counter
         self.match = Signal(width)  # value at which to turn pulse on
         self.counter = Signal(width)  # underlying counter - read only
@@ -27,19 +27,19 @@ class PulseGen(Elaboratable):
         ]
 
         with m.If(self.active):
-            m.d.comb += self.pulse.eq(self.invert ^ self._pulse)
+            m.d.comb += self.o.eq(self.invert ^ self._o)
             with m.If(self.counter == self.top):
                 m.d.sync += [
                     self.counter.eq(0),
-                    self._pulse.eq(0),
+                    self._o.eq(0),
                 ]
             with m.Else():
                 m.d.sync += self.counter.eq(self.counter + 1)
                 with m.If(self.counter == self.match):
-                        m.d.sync += self._pulse.eq(1)
+                        m.d.sync += self._o.eq(1)
 
         with m.Else():
             m.d.sync += self.counter.eq(0)
-            m.d.comb += self.pulse.eq(0)
+            m.d.comb += self.o.eq(0)
 
         return m

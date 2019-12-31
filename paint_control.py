@@ -4,7 +4,7 @@ import operator
 from nmigen import *
 
 from motor_enable import MotorEnable
-from pulse_gen import PulseGen
+from pwm import Pwm
 '''
 Controlled by a number of configuation and status registers.
 These are readable/writable by SPI
@@ -58,11 +58,11 @@ class PaintControl(Elaboratable):
             m.submodules += motor_enable
 
         # Pulse generator used to drive the step signal
-        pulse_gen = PulseGen(16)
-        m.submodules.pulse_gen = pulse_gen
-        m.d.comb += pulse_gen.invert.eq(1)
+        pulser = Pwm(16)
+        m.submodules.pulser = pulser
+        m.d.comb += pulser.invert.eq(1)
 
-        # create a clock signal from the PulseGen pulse
+        # create a clock domain from the pulser output
         step_signal = ClockDomain('step_signal')
         m.domains += step_signal
 
@@ -105,11 +105,11 @@ class PaintControl(Elaboratable):
 
                 m.d.comb += step_signal.clk.eq(ClockSignal('sync'))
 
-                # FIXME do this properly?
-                # load some basic values into pulse gen module
+                # FIXME do this properly - ie calculate values appropriately or something
+                # load some basic values into pwm module
                 m.d.sync += [
-                    pulse_gen.top.eq(100),
-                    pulse_gen.match.eq(16),
+                    pulser.top.eq(100),
+                    pulser.match.eq(16),
                 ]
 
                 # Assign the incoming color values to corresponding writable registers
@@ -130,8 +130,8 @@ class PaintControl(Elaboratable):
                             pass
 
             with m.State("DISPENSING_PREP"):
-                # swich step_signal clock source to the pulse gen module
-                m.d.comb += step_signal.clk.eq(pulse_gen.pulse)
+                # Switch step_signal clock source to the pulser output
+                m.d.comb += step_signal.clk.eq(pulser.o)
                 for i, e in enumerate(self.motor_enables):
                     with m.If (self.colours[i] != 0):
                         m.d.sync += e.enable_i.eq(1)
@@ -142,21 +142,21 @@ class PaintControl(Elaboratable):
             # - READY
             # - ERROR
             with m.State("DISPENSING"):
-                # continue driving step_signal from pulse_gen clock
-                m.d.comb += step_signal.clk.eq(pulse_gen.pulse)
+                # continue driving step_signal from pulser module
+                m.d.comb += step_signal.clk.eq(pulser.o)
 
-                # start the pulse_gen module
-                m.d.sync += pulse_gen.active.eq(1)
+                # start the pulser module
+                m.d.sync += pulser.active.eq(1)
 
                 # Enable the motors for colours that have steps,
                 # and turn them off when the step count for the colour hits 0
                 for i, c in enumerate(self.colours):
                     with m.If(c == 0):
-                        # Wait until pulse_gen pulse is zero.
+                        # Wait until pulser is zero.
                         # This is a bit hacky - ideally we should wait for 1us
                         # after the pulse goes low. But I'm guessing the stepper
                         # motor driver won't care - it should have stepped.
-                        with m.If(pulse_gen.pulse == 0):
+                        with m.If(pulser.o == 0):
                             m.d.sync += self.motor_enables[i].enable_i.eq(0)
                     with m.Else():
                         m.d.sync += self.motor_enables[i].enable_i.eq(1)
@@ -179,10 +179,11 @@ class PaintControl(Elaboratable):
                             with m.If(c != 0):
                                 m.d.step_signal += c.eq(c-1)
 
-                        # If all colours are 0, go to start
-                        # FIXME need to make sure the final step completes first
+                        # If all colours are 0, go to DONE
                         with m.If(functools.reduce(operator.or_, self.colours) == 0):
-                            m.next = "DONE"
+                            # wait for final pulse to compete
+                            with m.If(pulser.o == 0):
+                                m.next = "DONE"
 
             # HOME
             # next states are
@@ -201,16 +202,13 @@ class PaintControl(Elaboratable):
 
             # ERROR
             # Entered when unexpected error state occurs
-            # e.g. protocol error, signal error
+            # e.g. protocol error, hardware error
             # Hitting end stops and thus terminating a normal dispense event
-            # is not considered an error.
+            # is not considered an error. FIXME is this true?
             # next states are
             # - READY
             with m.State("ERROR"):
-                with m.If(self.control[0]):
+                with m.If(self.reset):
                     m.next = "START"
-
-                with m.Else():
-                    pass
 
         return m

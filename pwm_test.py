@@ -2,11 +2,11 @@ from nmigen import *
 from nmigen.test.utils import *
 from nmigen.back.pysim import *
 
-from pulse_gen import *
+from pwm import *
 
-class PulseGenTest(FHDLTestCase):
+class PwmTest(FHDLTestCase):
     def setUp(self):
-        self.dut = PulseGen()
+        self.dut = Pwm()
 
     def test_8_10(self):
         sim = Simulator(fragment=self.dut)
@@ -21,6 +21,6 @@ class PulseGenTest(FHDLTestCase):
                 yield
         sim.add_sync_process(process)
         with sim.write_vcd(
-            "pulse_gen_test_8_10.vcd",
-            "pulse_gen_test_8_10.gtkw"):
+            "pwm_test_8_10.vcd",
+            "pwm_test_8_10.gtkw"):
             sim.run()
