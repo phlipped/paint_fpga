@@ -9,7 +9,7 @@ class MoterEnableTest(FHDLTestCase):
         self.dut = MotorEnable()
 
     def test_0(self):
-        with open("motor_enable.vcd", "w") as vcd_file, open("motor_enable.gtkw", "w") as gtkw_file, Simulator(
+        with open("test_output/motor_enable.vcd", "w") as vcd_file, open("test_output/motor_enable.gtkw", "w") as gtkw_file, Simulator(
             self.dut,
             vcd_file=vcd_file,
             gtkw_file=gtkw_file) as sim:

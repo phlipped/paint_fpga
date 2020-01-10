@@ -30,8 +30,8 @@ class SpiCoreTest(FHDLTestCase):
                 assert (yield self.dut.i_reg == bits)
         sim.add_sync_process(process, domain='spi_rising')
         with sim.write_vcd(
-            "spi_core_test_data_in.vcd",
-            "spi_core_test_data_in.gtkw"):
+            "test_output/spi_core_test_data_in.vcd",
+            "test_output/spi_core_test_data_in.gtkw"):
             sim.run()
 
     def testDataOut(self):
@@ -81,8 +81,8 @@ class SpiCoreTest(FHDLTestCase):
                 yield Delay(1e-08)
         sim.add_process(process)
         with sim.write_vcd(
-            "spi_core_test_data_out.vcd",
-            "spi_core_test_data_out.gtkw",
+            "test_output/spi_core_test_data_out.vcd",
+            "test_output/spi_core_test_data_out.gtkw",
             ):
             sim.run()
         expected_miso_out = ([0] * self.width) + bit_pattern[:words_to_test * self.width]

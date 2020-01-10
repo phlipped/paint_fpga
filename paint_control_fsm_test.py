@@ -26,8 +26,8 @@ class PaintControlFSMTest(FHDLTestCase):
             yield
         sim.add_sync_process(process)
         with sim.write_vcd(
-            "paint_control_fsm_test_init.vcd",
-            "paint_control_fsm_test_init.gtkw"):
+            "test_output/paint_control_fsm_test_init.vcd",
+            "test_output/paint_control_fsm_test_init.gtkw"):
             sim.run()
 
     def testDispensing(self):
@@ -47,6 +47,6 @@ class PaintControlFSMTest(FHDLTestCase):
                 yield
         sim.add_sync_process(process)
         with sim.write_vcd(
-            "paint_control_fsm_test_dispensing.vcd",
-            "paint_control_fsm_test_dispensing.gtkw"):
+            "test_output/paint_control_fsm_test_dispensing.vcd",
+            "test_output/paint_control_fsm_test_dispensing.gtkw"):
             sim.run()

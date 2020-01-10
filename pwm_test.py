@@ -21,6 +21,6 @@ class PwmTest(FHDLTestCase):
                 yield
         sim.add_sync_process(process)
         with sim.write_vcd(
-            "pwm_test_8_10.vcd",
-            "pwm_test_8_10.gtkw"):
+            "test_output/pwm_test_8_10.vcd",
+            "test_output/pwm_test_8_10.gtkw"):
             sim.run()

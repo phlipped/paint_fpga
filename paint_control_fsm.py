@@ -53,6 +53,11 @@ class PaintControlFSM(Elaboratable):
         self.reset = Signal()
         m.d.comb += self.reset.eq(self.control[0])
 
+        # == error ==
+        # Read-only
+        # In error state, this is populated with a value
+        # It is cleared when entering READY state
+
         # == colours_in ==
         # Writeable
         # Register where steps for each colour can be specified
@@ -81,7 +86,11 @@ class PaintControlFSM(Elaboratable):
         m.submodules.pulser = pulser
         m.d.comb += pulser.invert.eq(1)
 
-        # Clock domain from the pulser output
+        # Clock domain for "step_signal".
+        # In READY state, this domain is synced to the 'sync' clock domain so
+        # that various step-related registers are populated from sync domain.
+        # Then, when stepping actually starts, the step_signal is driven from
+        # the pulser module.
         step_signal = ClockDomain('step_signal')
         m.domains += step_signal
 
@@ -215,6 +224,10 @@ class PaintControlFSM(Elaboratable):
                 with m.Else():
                     pass
 
+            # DONE
+            # wait until a reset is asserted before continuing.
+            # next states are:
+            # - START
             with m.State("DONE"):
                 with m.If(self.reset):     # If CANCEL bit is set, go back to START
                     m.next = "START"
@@ -222,10 +235,9 @@ class PaintControlFSM(Elaboratable):
             # ERROR
             # Entered when unexpected error state occurs
             # e.g. protocol error, hardware error
-            # Hitting end stops and thus terminating a normal dispense event
-            # is not considered an error. FIXME is this true?
             # next states are
-            # - READY
+            # - START
+            # FIXME could probably just be folded into "DONE" state?
             with m.State("ERROR"):
                 with m.If(self.reset):
                     m.next = "START"
