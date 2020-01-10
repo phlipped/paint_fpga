@@ -32,24 +32,43 @@ Registers 0 through 24 are 5 lots of 5-register modules relating to the motors
 
 '''
 
-class PaintControl(Elaboratable):
+class PaintControlFSM(Elaboratable):
     def __init__(self):
         pass
 
     def elaborate(self, platform):
         m = Module()
 
-        ro_registers = []
-        rw_registers = []
-        # 0  : Reset
-        # 1-2: Mode - 01 is dispensing, 10 is homing, 11 is illegal
-        # 3-7: Undefined
+        # == control ==:
+        # Writeable
+        #   0  : Reset
+        #   1-2: Mode - 01 is dispensing, 10 is homing, 11 is illegal
+        #   3-7: Undefined
         self.control = Signal(8)
+
+        # == reset ==
+        # Just identifies one field of control register.
+        # There's a better way to do this - a "layout" or something?
+        # I just don't know how to do it yet
         self.reset = Signal()
         m.d.comb += self.reset.eq(self.control[0])
+
+        # == colours_in ==
+        # Writeable
+        # Register where steps for each colour can be specified
         self.colours_in = []
+
+        # == colours ==
+        # Read-only
+        # Internal register used to manage the remaining steps for each colour
         self.colours = []
+
+        # motor_enables
+        #
+        # Submodules to manage the enable logic for each motor
         self.motor_enables = []
+
+        # Populate colours_in, colours and motor_enables
         for i in range(5):
             self.colours_in.append(Signal(32))
             self.colours.append(Signal(32))
@@ -62,7 +81,7 @@ class PaintControl(Elaboratable):
         m.submodules.pulser = pulser
         m.d.comb += pulser.invert.eq(1)
 
-        # create a clock domain from the pulser output
+        # Clock domain from the pulser output
         step_signal = ClockDomain('step_signal')
         m.domains += step_signal
 

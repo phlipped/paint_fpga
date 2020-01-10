@@ -2,11 +2,11 @@ from nmigen import *
 from nmigen.test.utils import *
 from nmigen.back.pysim import *
 
-from paint_control import *
+from paint_control_fsm import *
 
-class PaintControlTest(FHDLTestCase):
+class PaintControlFSMTest(FHDLTestCase):
     def setUp(self):
-        self.dut = PaintControl()
+        self.dut = PaintControlFSM()
 
     def testReadyToStart(self):
         """Test that the FSM moves from Ready to Start when reset is asserted."""
@@ -26,8 +26,8 @@ class PaintControlTest(FHDLTestCase):
             yield
         sim.add_sync_process(process)
         with sim.write_vcd(
-            "paint_control_test_init.vcd",
-            "paint_control_test_init.gtkw"):
+            "paint_control_fsm_test_init.vcd",
+            "paint_control_fsm_test_init.gtkw"):
             sim.run()
 
     def testDispensing(self):
@@ -47,6 +47,6 @@ class PaintControlTest(FHDLTestCase):
                 yield
         sim.add_sync_process(process)
         with sim.write_vcd(
-            "paint_control_test_dispensing.vcd",
-            "paint_control_test_dispensing.gtkw"):
+            "paint_control_fsm_test_dispensing.vcd",
+            "paint_control_fsm_test_dispensing.gtkw"):
             sim.run()
