@@ -143,9 +143,11 @@ class PaintControlFSM(Elaboratable):
                 ]
 
                 # Assign the incoming color values to corresponding writable registers
+                # Do this on the step clock, which is currently bound to the sync
+                # clock anyway
                 m.d.step_signal += [o.eq(i) for i, o in zip(self.colours_in, self.colours)]
 
-                with m.If(self.reset):     # If CANCEL bit is set, go back to START
+                with m.If(self.reset):          # If CANCEL bit is set, go back to START
                     m.next = "START"
                 with m.Else():                  # Otherwise, normal case ...
                     with m.Switch(self.control[1:3]):
@@ -162,6 +164,8 @@ class PaintControlFSM(Elaboratable):
             with m.State("DISPENSING_PREP"):
                 # Switch step_signal clock source to the pulser output
                 m.d.comb += step_signal.clk.eq(pulser.o)
+
+                # Turn on the enable line of any motor which has non-zero steps
                 for i, e in enumerate(self.motor_enables):
                     with m.If (self.colours[i] != 0):
                         m.d.sync += e.enable_i.eq(1)
@@ -185,7 +189,8 @@ class PaintControlFSM(Elaboratable):
                         # Wait until pulser is zero.
                         # This is a bit hacky - ideally we should wait for 1us
                         # after the pulse goes low. But I'm guessing the stepper
-                        # motor driver won't care - it should have stepped.
+                        # motor driver won't care - it's probably already done
+                        # the step after the rising edge, right?
                         with m.If(pulser.o == 0):
                             m.d.sync += self.motor_enables[i].enable_i.eq(0)
                     with m.Else():
