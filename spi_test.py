@@ -105,6 +105,10 @@ class SpiRegIfTest(FHDLTestCase):
             yield self.dut.mosi.eq(b)
             yield from self.pump_spi_clk()
 
+    def send_read_addr(self, addr):
+        addr_as_list_of_7_bits = number_to_bit_list(addr, 7)
+        yield from self.send_mosi_bits([0] + addr_as_list_of_7_bits)
+
     def send_write_addr_val(self, addr, val):
         addr_as_list_of_7_bits = number_to_bit_list(addr, 7)
         yield from self.send_mosi_bits([1] + addr_as_list_of_7_bits)
@@ -118,9 +122,11 @@ class SpiRegIfTest(FHDLTestCase):
             yield
             yield self.dut.ss.eq(0)
             yield
-            yield from self.send_write_addr_val(3, 27)
+            yield from self.send_write_addr_val(3, 59)
             yield from self.send_write_addr_val(1, 127)
             yield from self.send_write_addr_val(5, 88)
+            yield from self.send_read_addr(3)
+            yield from self.send_mosi_bits([0] * 8)
             yield
 
             yield from self.pump_spi_clk()

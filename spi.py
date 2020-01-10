@@ -185,7 +185,7 @@ class SpiRegIf(Elaboratable):
                 m.next = "HANDLE_READ_1"
 
             with m.State("HANDLE_READ_1"):
-                with m.If(spi_core.out_count == 0):
+                with m.If(spi_core.read_ready == 0):
                     m.next = "WAIT_FOR_CMD"
 
             with m.State("ERROR"):
