@@ -33,9 +33,6 @@ Registers 0 through 24 are 5 lots of 5-register modules relating to the motors
 '''
 
 class PaintControlFSM(Elaboratable):
-    def __init__(self):
-        pass
-
     def elaborate(self, platform):
         m = Module()
 
