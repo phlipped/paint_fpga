@@ -54,23 +54,25 @@ class PaintControlFSM(Elaboratable):
         m.d.comb += self.reset.eq(self.control[0])
 
         # == error ==
-        # Read-only
+        # Read-only from outside
         # In error state, this is populated with a value
         # It is cleared when entering READY state
 
         # == colours_in ==
         # Writeable
-        # Register where steps for each colour can be specified
+        # Collection of registers where steps for each colour can be specified
         self.colours_in = []
 
         # == colours ==
-        # Read-only
-        # Internal register used to manage the remaining steps for each colour
+        # Read-only from outside
+        # Collection of registers used to update the remaining steps for each
+        # colour
         self.colours = []
 
         # motor_enables
         #
-        # Submodules to manage the enable logic for each motor
+        # Collection of 'motor_enable' submodules to manage the enable logic for
+        # each motor
         self.motor_enables = []
 
         # Populate colours_in, colours and motor_enables
