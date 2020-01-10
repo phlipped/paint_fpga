@@ -47,7 +47,7 @@ class PaintControlFSM(Elaboratable):
         self.control = Signal(8)
 
         # == reset ==
-        # Just identifies one field of control register.
+        # Just gives a name to one field of control register.
         # There's a better way to do this - a "layout" or something?
         # I just don't know how to do it yet
         self.reset = Signal()

@@ -107,7 +107,7 @@ class SpiRegIf(Elaboratable):
         self.mosi = Signal()
         self.miso = Signal()
         self.regs = Array([r[0] for r in regs])
-        self.writeable = Array([r[1] for r in regs])
+        self.writable = Array([r[1] for r in regs])
 
     def _check_regs(self, regs):
         """Checks the data types of elements of regs, and that all registers have equal size"""
@@ -172,7 +172,8 @@ class SpiRegIf(Elaboratable):
                     # FIXME don't write into read-only regs
                     # Might need a separate array of single digit regs that
                     # correspond to each reg in the main regs array?
-                    m.d.sync += self.regs[self.addr].eq(spi_core.i_reg)
+                    with m.If(self.writable[self.addr] == 1):
+                        m.d.sync += self.regs[self.addr].eq(spi_core.i_reg)
                     m.next = "HANDLE_WRITE_2"
 
             with m.State("HANDLE_WRITE_2"):
