@@ -106,17 +106,17 @@ class SpiRegIf(Elaboratable):
         self.ss = Signal()
         self.mosi = Signal()
         self.miso = Signal()
-        # FIXME create relevant structures here?
+        self.regs = Array([r[0] for r in regs])
+        self.writeable = Array([r[1] for r in regs])
 
     def _check_regs(self, regs):
+        """Checks the data types of elements of regs, and that all registers have equal size"""
         width = None
-        for addr, (sig, rw) in regs.items():
+        for sig, rw in regs:
             if width is None:
                 width = len(sig)
-            if not isinstance(width, int):
-                raise Exception("bad type for addr - should be int, but found {!r}".format(addr))
-            if not isinstance(rw, bool):
-                raise Exception("bad type for rw - should be bool, but found {!r}".format(rw))
+            if not isinstance(rw, int):
+                raise Exception("bad type for rw - should be int, but found {!r}".format(rw))
             if len(sig) != width:
                 raise Exception("bad regs - Signal for addr {} has different width - {} instead of {}".format(addr, len(sig), width))
         return width
@@ -124,37 +124,69 @@ class SpiRegIf(Elaboratable):
     def elaborate(self, platform):
         m = Module()
 
-        spi_core = SpiCore(self.width)
+        spi_core = SpiCore(self.spi_width)
         spi_core.spi_clk = self.spi_clk
         spi_core.ss = self.ss
         spi_core.mosi = self.mosi
         spi_core.miso = self.miso
         m.submodules += spi_core
 
-        self.status = Signal()
+        self.addr = Signal(self.spi_width)
 
-        with m.FSM() as fsm:            
+        # nmigen simulator bug
+        self.spi_clk2 = Signal()
+        self.ss2 = Signal()
+        self.mosi2 = Signal()
+        self.regs2 = Array([Signal(len(r)) for r in self.regs])
+        m.d.comb += [
+            self.spi_clk2.eq(self.spi_clk),
+            self.ss2.eq(self.ss),
+            self.mosi2.eq(self.mosi),
+        ]
+        m.d.comb += [o.eq(i) for i, o in zip(self.regs, self.regs2)]
+
+        with m.FSM() as fsm:
             with m.State("START"):
-                pass
+                m.next = "WAIT_FOR_CMD"
 
-            with m.State("WAITING"):
-                # just waiting for Spi Core slave select to go low
-                pass
-
-            with m.State("GET_CMD"):
-                pass
+            with m.State("WAIT_FOR_CMD"):
+                # just waiting for Spi Core to have some data
+                with m.If(spi_core.read_ready == 1):
+                    # Store the remaining bits of i_reg in addr
+                    # The MSB indicates read or write, so we remove it and
+                    # replace it with a zero
+                    m.d.sync += self.addr.eq(Cat(spi_core.i_reg[:-1], 0))
+                    with m.If(spi_core.i_reg[-1] == 0):
+                        m.next = "HANDLE_READ"
+                    with m.Else():
+                        m.next = "HANDLE_WRITE"
 
             with m.State("HANDLE_WRITE"):
-                '''
-                ok, so let's assume there is a register somewhere that has an address in it
-                and let's assume we went ahead and received the value we need to write.
-                How do we use the passed in addr to select the appropriate register?
+                # We need to wait for the previous value to go away
+                with m.If(spi_core.read_ready == 0):
+                    m.next = "HANDLE_WRITE_1"
 
-                '''
-                pass
+            with m.State("HANDLE_WRITE_1"):
+                # Now wait for a new value to be ready
+                with m.If(spi_core.read_ready == 1):
+                    # FIXME don't write into read-only regs
+                    # Might need a separate array of single digit regs that
+                    # correspond to each reg in the main regs array?
+                    m.d.sync += self.regs[self.addr].eq(spi_core.i_reg)
+                    m.next = "HANDLE_WRITE_2"
+
+            with m.State("HANDLE_WRITE_2"):
+                # Wait for the data to be gone, and then go back to state "WAIT_CMD_READY"
+                with m.If(spi_core.read_ready == 0):
+                    m.next = "WAIT_FOR_CMD"
 
             with m.State("HANDLE_READ"):
-                pass
+                m.d.sync += spi_core.o_reg.eq(self.regs[self.addr])
+                m.next = "HANDLE_READ_1"
+
+            with m.State("HANDLE_READ_1"):
+                with m.If(spi_core.out_count == 0):
+                    m.next = "WAIT_FOR_CMD"
 
             with m.State("ERROR"):
                 pass

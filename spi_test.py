@@ -88,9 +88,54 @@ class SpiCoreTest(FHDLTestCase):
         expected_miso_out = ([0] * self.width) + bit_pattern[:words_to_test * self.width]
         assert expected_miso_out == miso_out
 
+class SpiRegIfTest(FHDLTestCase):
+    def setUp(self):
+        width = 8
+        regs = [(Signal(width), 1) for x in range(5)] + [(Signal(width), 0) for x in range(5)]
+        self.dut = SpiRegIf(regs)
+
+    def pump_spi_clk(self):
+        yield self.dut.spi_clk.eq(1)
+        yield Delay(1e-8)
+        yield self.dut.spi_clk.eq(0)
+        yield Delay(1e-8)
+
+    def send_mosi_bits(self, bits):
+        for b in bits:
+            yield self.dut.mosi.eq(b)
+            yield from self.pump_spi_clk()
+
+    def send_write_addr_val(self, addr, val):
+        addr_as_list_of_7_bits = number_to_bit_list(addr, 7)
+        yield from self.send_mosi_bits([1] + addr_as_list_of_7_bits)
+        val_as_list_of_8_bits = number_to_bit_list(val, 8)
+        yield from self.send_mosi_bits(val_as_list_of_8_bits)
+
+    def test0(self):
+        sim = Simulator(fragment=self.dut)
+        sim.add_clock(1e-9, domain='sync')
+        def process():
+            yield
+            yield self.dut.ss.eq(0)
+            yield
+            yield from self.send_write_addr_val(3, 27)
+            yield from self.send_write_addr_val(1, 127)
+            yield from self.send_write_addr_val(5, 88)
+            yield
+
+            yield from self.pump_spi_clk()
+        sim.add_sync_process(process)
+        with sim.write_vcd(
+            "test_output/spi_reg_if_test0.vcd",
+            "test_output/spi_reg_if_test0.gtkw"):
+            sim.run()
+
 def bit_list_to_number(bits):
     bit_string = ''.join([str(b) for b in bits])
     return int(bit_string, 2)
+
+def number_to_bit_list(n, pad):
+    return list(reversed([(n >> x) & 1 for x in range(pad)]))
 
 def shift_left(val, size):
     val = val << 1
