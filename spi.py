@@ -94,11 +94,12 @@ class SpiCore(Elaboratable):
 class SpiRegIf(Elaboratable):
     '''
     Args:
-      regs: a dictionary of {integer: (Signal(), bool)}, where integer is the
-      'address' that will be used in SPI commands. The bool indicates whether
-      the register is writable from SPI. All registers are readable.
+      regs: a list of (Signal(), int). Addresses are assigned to the registers
+      0 indexed in the order they appear in the list. The int indicates whether
+      or not the register is writable (1 means read/write, 0 means read only)
 
-      Writable registers must not be driven by any other processes
+      Writable registers cannot be driven by any other modules - SpiRegIf module
+      takes ownership of setting the value in these registers.
     '''
     def __init__(self, regs):
         self.spi_width = self._check_regs(regs)
