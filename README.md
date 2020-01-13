@@ -1,6 +1,12 @@
 # CHANGE LOG
 
 ## 2020-01-13
+- Simple end to end test completed. It largely seems to work? Gosh!
+- Need to sort out the endianness of various registers (e.g. colour steps registers)
+- Meaning of direction (1 is up, 0 is down?). Doesn't even support setting the
+  direction at this stage.
+
+## 2020-01-13
 - Basic top-level module is working that joins spi to paint control fsm
 - Needed to split the regs into read regs and write regs, because otherwise
 there was a conflict about how the read regs were being driven (The app logic
