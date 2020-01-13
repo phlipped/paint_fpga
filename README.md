@@ -1,5 +1,11 @@
 # CHANGE LOG
 
+## 2020-01-14
+- Wire up various signals from paint_control to paint_control_fsm.
+- Next step is probably to create a 'board', wire up the board to the paint_control
+  module, and try to write it to the TinyFPGA
+
+
 ## 2020-01-13
 - Simple end to end test completed. It largely seems to work? Gosh!
 - Need to sort out the endianness of various registers (e.g. colour steps registers)

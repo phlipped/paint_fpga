@@ -10,10 +10,10 @@ class PaintControlFSM(Elaboratable):
     def __init__(self):
         # == control ==:
         # Writeable
-        self.control = Record(layout = [
+        self.control = Record(layout=[
             ("reset", 1),
             ("mode", 2),  # FIXME clear up the endianness
-            ("direction", 1)  # 0 means down, 1 means up FIXME not yet implemented
+            ("direction", 1),  # 0 means down, 1 means up FIXME not yet implemented
             ("reserved", 4),
         ])
 
@@ -46,15 +46,19 @@ class PaintControlFSM(Elaboratable):
             motor_enable = MotorEnable()
             self.motor_enables.append(motor_enable)
 
+        self.steps = Signal()
+
 
     def elaborate(self, platform):
         m = Module()
 
         for i in range(5):
             m.submodules += self.motor_enables[i]
+            m.d.comb += self.motor_enables[i].direction.eq(self.control.direction)
 
         # Pulse generator used to drive the step signal
         pulser = Pwm(16)
+        pulser.o = self.steps
         m.submodules.pulser = pulser
         m.d.comb += pulser.invert.eq(1)
 

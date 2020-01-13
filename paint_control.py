@@ -41,12 +41,32 @@ Registers 0 through 24 are 5 lots of 5-register modules relating to the motors
         self.ss = Signal()
         self.mosi = Signal()
         self.miso = Signal()
+        self.motor_signals = Array()
+        for i in range(5):
+            r = Record(layout=[
+                ("enable_i", 1),
+                ("enable_o", 1),
+                ("limit_top", 1),
+                ("limit_bottom", 1),
+            ])
+            self.motor_signals.append(r)
+        self.steps = Signal()
 
     def elaborate(self, platform):
         m = Module()
 
         self.fsm = fsm = PaintControlFSM()
         m.submodules += fsm
+
+        # wire up the motor enable signals
+        for i, r in enumerate(self.motor_signals):
+            fsm.motor_enables[i].enable_i = r.enable_i
+            fsm.motor_enables[i].enable_o = r.enable_o
+            fsm.motor_enables[i].limit_top = r.limit_top
+            fsm.motor_enables[i].limit_bottom = r.limit_bottom
+
+        # wire up the step signal
+        self.fsm.steps = self.steps
 
         read_regs = Array()
         write_regs = Array()
@@ -79,6 +99,7 @@ Registers 0 through 24 are 5 lots of 5-register modules relating to the motors
         # FIXME create a status register in paint_control_fsm, then link to it here
 
         spi_reg_if = SpiRegIf(read_regs, write_regs)
+        # wire up the spi signals
         spi_reg_if.spi_clk = self.spi_clk
         spi_reg_if.ss = self.ss
         spi_reg_if.mosi = self.mosi
