@@ -13,18 +13,17 @@ class PaintControlFSM(Elaboratable):
         #   0  : Reset
         #   1-2: Mode - 01 is dispensing, 10 is homing, 11 is illegal
         #   3-7: Undefined
-        self.control = Signal(8)
-
-        # == reset ==
-        # Just gives a name to one field of control register.
-        # There's a better way to do this - a "layout" or something?
-        # I just don't know how to do it yet
-        self.reset = self.control[0]
+        self.control = Record(layout = [
+            ("reset", 1),
+            ("mode", 2),
+            ("reserved", 5),
+        ])
 
         # == error ==
         # Read-only from outside
         # In error state, this is populated with a value
         # It is cleared when entering READY state
+        # FIXME implement
 
         # == colours_in ==
         # Writeable
@@ -37,8 +36,7 @@ class PaintControlFSM(Elaboratable):
         # colour
         self.colours = []
 
-        # motor_enables
-        #
+        # == motor_enables == 
         # Collection of 'motor_enable' submodules to manage the enable logic for
         # each motor
         self.motor_enables = []
@@ -89,7 +87,7 @@ class PaintControlFSM(Elaboratable):
             # - ERROR -> if POST fails (e.g. end stop switches are bad)
             with m.State("START"):
                 # FIXME actually implement POST - e.g. check the limit switches are happy
-                with m.If(self.reset == 0):
+                with m.If(self.control.reset == 0):
                     m.next = "READY"
 
             # READY
@@ -121,10 +119,10 @@ class PaintControlFSM(Elaboratable):
                 # clock anyway
                 m.d.step_signal += [o.eq(i) for i, o in zip(self.colours_in, self.colours)]
 
-                with m.If(self.reset):          # If CANCEL bit is set, go back to START
+                with m.If(self.control.reset):          # If CANCEL bit is set, go back to START
                     m.next = "START"
                 with m.Else():                  # Otherwise, normal case ...
-                    with m.Switch(self.control[1:3]):
+                    with m.Switch(self.control.mode):
                         with m.Case(0b01):
                             m.next = "DISPENSING_PREP"
                         with m.Case(0b10):
@@ -170,7 +168,7 @@ class PaintControlFSM(Elaboratable):
                     with m.Else():
                         m.d.sync += self.motor_enables[i].enable_i.eq(1)
 
-                with m.If(self.reset):
+                with m.If(self.control.reset):
                     m.next = "START"
 
                 with m.Else():
@@ -199,7 +197,7 @@ class PaintControlFSM(Elaboratable):
             # - READY
             # - ERROR
             with m.State("HOMING"):
-                with m.If(self.reset):
+                with m.If(self.control.reset):
                     m.next = "START"
 
                 with m.Else():
@@ -210,7 +208,7 @@ class PaintControlFSM(Elaboratable):
             # next states are:
             # - START
             with m.State("DONE"):
-                with m.If(self.reset):     # If CANCEL bit is set, go back to START
+                with m.If(self.control.reset):     # If CANCEL bit is set, go back to START
                     m.next = "START"
 
             # ERROR
@@ -220,7 +218,7 @@ class PaintControlFSM(Elaboratable):
             # - START
             # FIXME could probably just be folded into "DONE" state?
             with m.State("ERROR"):
-                with m.If(self.reset):
+                with m.If(self.control.reset):
                     m.next = "START"
 
         return m

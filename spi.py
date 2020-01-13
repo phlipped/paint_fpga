@@ -102,9 +102,9 @@ class SpiRegIf(Elaboratable):
       takes ownership of setting the value in these registers.
     '''
     def __init__(self, read_regs, write_regs):
-        if read_regs[0].width != write_regs[0].width:
+        if read_regs[0].shape().width != write_regs[0].shape().width:
             raise Exception("size of registers in read_regs must be the same as in write_regs")
-        self.spi_width = read_regs[0].width
+        self.spi_width = read_regs[0].shape().width
         self.spi_clk = Signal()
         self.ss = Signal()
         self.mosi = Signal()
