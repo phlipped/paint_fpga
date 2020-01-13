@@ -97,9 +97,9 @@ class SpiRegIfTest(FHDLTestCase):
 
     def pump_spi_clk(self):
         yield self.dut.spi_clk.eq(1)
-        yield Delay(1e-8)
+        yield Delay(1e-6)
         yield self.dut.spi_clk.eq(0)
-        yield Delay(1e-8)
+        yield Delay(1e-6)
 
     def send_mosi_bits(self, bits):
         for b in bits:

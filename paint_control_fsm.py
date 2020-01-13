@@ -10,13 +10,11 @@ class PaintControlFSM(Elaboratable):
     def __init__(self):
         # == control ==:
         # Writeable
-        #   0  : Reset
-        #   1-2: Mode - 01 is dispensing, 10 is homing, 11 is illegal
-        #   3-7: Undefined
         self.control = Record(layout = [
             ("reset", 1),
-            ("mode", 2),
-            ("reserved", 5),
+            ("mode", 2),  # FIXME clear up the endianness
+            ("direction", 1)  # 0 means down, 1 means up FIXME not yet implemented
+            ("reserved", 4),
         ])
 
         # == error ==
@@ -36,7 +34,7 @@ class PaintControlFSM(Elaboratable):
         # colour
         self.colours = []
 
-        # == motor_enables == 
+        # == motor_enables ==
         # Collection of 'motor_enable' submodules to manage the enable logic for
         # each motor
         self.motor_enables = []
@@ -145,8 +143,9 @@ class PaintControlFSM(Elaboratable):
 
             # DISPENSE
             # next states are
-            # - READY
+            # - START
             # - ERROR
+            # - DONE
             with m.State("DISPENSING"):
                 # continue driving step_signal from pulser module
                 m.d.comb += step_signal.clk.eq(pulser.o)
@@ -208,6 +207,7 @@ class PaintControlFSM(Elaboratable):
             # next states are:
             # - START
             with m.State("DONE"):
+                # FIXME set a status value somewhere?
                 with m.If(self.control.reset):     # If CANCEL bit is set, go back to START
                     m.next = "START"
 

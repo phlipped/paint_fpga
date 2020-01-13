@@ -45,7 +45,7 @@ Registers 0 through 24 are 5 lots of 5-register modules relating to the motors
     def elaborate(self, platform):
         m = Module()
 
-        fsm = PaintControlFSM()
+        self.fsm = fsm = PaintControlFSM()
         m.submodules += fsm
 
         read_regs = Array()
