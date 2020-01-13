@@ -101,26 +101,16 @@ class SpiRegIf(Elaboratable):
       Writable registers cannot be driven by any other modules - SpiRegIf module
       takes ownership of setting the value in these registers.
     '''
-    def __init__(self, regs):
-        self.spi_width = self._check_regs(regs)
+    def __init__(self, read_regs, write_regs):
+        if read_regs[0].width != write_regs[0].width:
+            raise Exception("size of registers in read_regs must be the same as in write_regs")
+        self.spi_width = read_regs[0].width
         self.spi_clk = Signal()
         self.ss = Signal()
         self.mosi = Signal()
         self.miso = Signal()
-        self.regs = Array([r[0] for r in regs])
-        self.writable = Array([r[1] for r in regs])
-
-    def _check_regs(self, regs):
-        """Checks the data types of elements of regs, and that all registers have equal size"""
-        width = None
-        for sig, rw in regs:
-            if width is None:
-                width = len(sig)
-            if not isinstance(rw, int):
-                raise Exception("bad type for rw - should be int, but found {!r}".format(rw))
-            if len(sig) != width:
-                raise Exception("bad regs - Signal for addr {} has different width - {} instead of {}".format(addr, len(sig), width))
-        return width
+        self.read_regs = read_regs
+        self.write_regs = write_regs
 
     def elaborate(self, platform):
         m = Module()
@@ -138,13 +128,15 @@ class SpiRegIf(Elaboratable):
         self.spi_clk2 = Signal()
         self.ss2 = Signal()
         self.mosi2 = Signal()
-        self.regs2 = Array([Signal(len(r)) for r in self.regs])
+        #self.read_regs2 = Array([Signal(len(r)) for r in self.read_regs])
+        #self.write_regs2 = Array([Signal(len(r)) for r in self.write_regs])
         m.d.comb += [
             self.spi_clk2.eq(self.spi_clk),
             self.ss2.eq(self.ss),
             self.mosi2.eq(self.mosi),
         ]
-        m.d.comb += [o.eq(i) for i, o in zip(self.regs, self.regs2)]
+        #m.d.comb += [o.eq(i) for i, o in zip(self.read_regs, self.read_regs2)]
+        #m.d.comb += [o.eq(i) for i, o in zip(self.write_regs, self.write_regs2)]
 
         with m.FSM() as fsm:
             with m.State("START"):
@@ -173,8 +165,7 @@ class SpiRegIf(Elaboratable):
                     # FIXME don't write into read-only regs
                     # Might need a separate array of single digit regs that
                     # correspond to each reg in the main regs array?
-                    with m.If(self.writable[self.addr] == 1):
-                        m.d.sync += self.regs[self.addr].eq(spi_core.i_reg)
+                    m.d.sync += self.write_regs[self.addr].eq(spi_core.i_reg)
                     m.next = "HANDLE_WRITE_2"
 
             with m.State("HANDLE_WRITE_2"):
@@ -183,7 +174,7 @@ class SpiRegIf(Elaboratable):
                     m.next = "WAIT_FOR_CMD"
 
             with m.State("HANDLE_READ"):
-                m.d.sync += spi_core.o_reg.eq(self.regs[self.addr])
+                m.d.sync += spi_core.o_reg.eq(self.read_regs[self.addr])
                 m.next = "HANDLE_READ_1"
 
             with m.State("HANDLE_READ_1"):

@@ -3,6 +3,10 @@
 # Not sure it actually does anything other than join those other two modules together
 from nmigen import *
 
+from paint_control_fsm import *
+from spi import *
+
+
 class PaintControl(Elaboratable):
     """
 THE FOLLOWING DOCSTIRNG IS INCORRECT - ENERALLY IGNORE IT, AND RECREATE PROPERLY
@@ -44,9 +48,11 @@ Registers 0 through 24 are 5 lots of 5-register modules relating to the motors
         fsm = PaintControlFSM()
         m.submodules += fsm
 
-        regs = []
+        read_regs = Array()
+        write_regs = Array()
         # 0 -> control
-        regs.append((fsm.control, 1))
+        read_regs.append(fsm.control)
+        write_regs.append(fsm.control)
 
         # Add colours_in to regs as 4 8-bit writable registers
         # 1-4 -> colour0_in
@@ -56,7 +62,8 @@ Registers 0 through 24 are 5 lots of 5-register modules relating to the motors
         # 17-20 -> colour4_in
         for i in range(5):    # do this 5 times - one for each colour
             for j in range(4):
-                regs.append(fsm.colours_in[j*8:j*8+8], 1)
+                read_regs.append(fsm.colours_in[i][j*8:j*8+8])
+                write_regs.append(fsm.colours_in[i][j*8:j*8+8])
 
         # Same deal for read-only colours registers
         # 21-24 0
@@ -66,14 +73,16 @@ Registers 0 through 24 are 5 lots of 5-register modules relating to the motors
         # 37-40 4
         for i in range(5):    # do this 5 times - one for each colour
             for j in range(4):
-                regs.append(fsm.colours[j*8:j*8+8], 0)
+                read_regs.append(fsm.colours[i][j*8:j*8+8])
 
         # FIXME add in the motor signals as read-only registers
-        # FIXME create and add a status register to the mix
+        # FIXME create a status register in paint_control_fsm, then link to it here
 
-
-        spi_reg_if = SpiRegIf(regs)
+        spi_reg_if = SpiRegIf(read_regs, write_regs)
         spi_reg_if.spi_clk = self.spi_clk
         spi_reg_if.ss = self.ss
         spi_reg_if.mosi = self.mosi
         spi_reg_if.miso = self.miso
+        m.submodules += spi_reg_if
+
+        return m

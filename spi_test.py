@@ -91,8 +91,9 @@ class SpiCoreTest(FHDLTestCase):
 class SpiRegIfTest(FHDLTestCase):
     def setUp(self):
         width = 8
-        regs = [(Signal(width), 1) for x in range(5)] + [(Signal(width), 0) for x in range(5)]
-        self.dut = SpiRegIf(regs)
+        read_regs = Array([Signal(width) for x in range(5)])
+        write_regs = Array([Signal(width) for x in range(5)])
+        self.dut = SpiRegIf(read_regs, write_regs)
 
     def pump_spi_clk(self):
         yield self.dut.spi_clk.eq(1)

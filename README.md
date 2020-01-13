@@ -1,18 +1,12 @@
-# Current status
-- basic FSM seems to work? Basic test seems to work
-
-
-## Up next
-- FSM general refinements
- - find a better way to drive the step_signal clk - currently it is driven in comb domain and therefore needs to have its clock source defined in every separate FSM state. Better to have it driven from a Signal that in turn selects the appropriate source?
- - Address fixmes
- - Add in SPI module?
-  - Should probably make this an 'outer shell' module that contains the
-  FSM module and drives the FSM by setting register values, and can read
-  status back from the FSM.
- - General refinements and cleanup
-
 # CHANGE LOG
+
+## 2020-01-13
+- Basic top-level module is working that joins spi to paint control fsm
+- Needed to split the regs into read regs and write regs, because otherwise
+there was a conflict about how the read regs were being driven (The app logic
+  prevented the read regs from being driven, but the compiler has no way of knowing
+  that and as far as it can tell they could potentially get driven because they
+  were in the same array as writable registers)
 
 ## 2019-12-28 23:00
 - Expanded the tests for paint_control - can actualy get it into and out of dispensing mode.

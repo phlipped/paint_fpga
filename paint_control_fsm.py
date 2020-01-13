@@ -5,37 +5,9 @@ from nmigen import *
 
 from motor_enable import MotorEnable
 from pwm import Pwm
-'''
-Controlled by a number of configuation and status registers.
-These are readable/writable by SPI
-
-Each register is 8 bits
-
-Registers 0 through 24 are 5 lots of 5-register modules relating to the motors
-0: Motor Step Count Lower
-1: Motor Step Count Higher
-2: Motor Status - limit_top, limit_bottom
-
-25: General Control register
-25.0: start/stop - set 0 to stop things, set 1 to make things go
-25.1: 0 = Dispense mode, 1 = Home mode
-25.2: Clear error state - return to Ready state
-
-26: Status Register (Read only)
-26.0: Active flag - are things moving right now?
-26.1: Current mode: 0 = Dispense, 1 = Home mode
-26.2: In Error
-26.3: Error type - 0 Protocol error, 1 Hardware error
-
-27: Max Speed control register
-28: Ramp up speed control register
-
-'''
 
 class PaintControlFSM(Elaboratable):
-    def elaborate(self, platform):
-        m = Module()
-
+    def __init__(self):
         # == control ==:
         # Writeable
         #   0  : Reset
@@ -47,8 +19,7 @@ class PaintControlFSM(Elaboratable):
         # Just gives a name to one field of control register.
         # There's a better way to do this - a "layout" or something?
         # I just don't know how to do it yet
-        self.reset = Signal()
-        m.d.comb += self.reset.eq(self.control[0])
+        self.reset = self.control[0]
 
         # == error ==
         # Read-only from outside
@@ -78,7 +49,13 @@ class PaintControlFSM(Elaboratable):
             self.colours.append(Signal(32))
             motor_enable = MotorEnable()
             self.motor_enables.append(motor_enable)
-            m.submodules += motor_enable
+
+
+    def elaborate(self, platform):
+        m = Module()
+
+        for i in range(5):
+            m.submodules += self.motor_enables[i]
 
         # Pulse generator used to drive the step signal
         pulser = Pwm(16)
