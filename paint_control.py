@@ -44,7 +44,6 @@ Registers 0 through 24 are 5 lots of 5-register modules relating to the motors
         self.motor_signals = Array()
         for i in range(5):
             r = Record(layout=[
-                ("enable_i", 1),
                 ("enable_o", 1),
                 ("limit_top", 1),
                 ("limit_bottom", 1),
@@ -60,7 +59,6 @@ Registers 0 through 24 are 5 lots of 5-register modules relating to the motors
 
         # wire up the motor enable signals
         for i, r in enumerate(self.motor_signals):
-            fsm.motor_enables[i].enable_i = r.enable_i
             fsm.motor_enables[i].enable_o = r.enable_o
             fsm.motor_enables[i].limit_top = r.limit_top
             fsm.motor_enables[i].limit_bottom = r.limit_bottom
