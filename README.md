@@ -1,5 +1,9 @@
 # CHANGE LOG
 
+## 2020-01-17
+- Created the platform/board stuff and wired everything up.
+- It compiles, and can be loaded on to the board. Now we just have to test I guess
+
 ## 2020-01-14
 - Wire up various signals from paint_control to paint_control_fsm.
 - Next step is probably to create a 'board', wire up the board to the paint_control

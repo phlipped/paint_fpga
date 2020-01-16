@@ -70,27 +70,43 @@ Registers 0 through 24 are 5 lots of 5-register modules relating to the motors
 
         read_regs = Array()
         write_regs = Array()
-        # 0 -> control
-        read_regs.append(fsm.control)
-        write_regs.append(fsm.control)
+        # reg 0 -> control
+        # FIXME not sure why I have to do make a control_as_signal thing, but trying to use
+        # fsm.control directly as a register in an Array doesn't work - a Record
+        # can't be used as a key in value collections. I'm not sure why it needs
+        # to be a key - I thought it was just being a value - but either way
+        # that's the error I get.
+        control_as_signal = Cat(
+            fsm.control.reset,
+            fsm.control.mode,
+            fsm.control.direction,
+            fsm.control.reserved
+        )
+        read_regs.append(control_as_signal)
+        write_regs.append(control_as_signal)
+
+        read_regs.append(fsm.pulser.top[0:8])
+        read_regs.append(fsm.pulser.top[8:16])
+        write_regs.append(fsm.pulser.top[0:8])
+        write_regs.append(fsm.pulser.top[8:16])
 
         # Add colours_in to regs as 4 8-bit writable registers
-        # 1-4 -> colour0_in
-        # 5-8 -> colour1_in
-        # 9-12 -> colour2_in
-        # 13-16 -> colour3_in
-        # 17-20 -> colour4_in
-        for i in range(5):    # do this 5 times - one for each colour
+        # 3-6 -> colour0_in
+        # 7-10 -> colour1_in
+        # 11-14 -> colour2_in
+        # 15-18 -> colour3_in
+        # 19-22 -> colour4_in
+        for i in range(5):
             for j in range(4):
                 read_regs.append(fsm.colours_in[i][j*8:j*8+8])
                 write_regs.append(fsm.colours_in[i][j*8:j*8+8])
 
         # Same deal for read-only colours registers
-        # 21-24 0
-        # 25-28 1
-        # 29-32 2
-        # 33-36 3
-        # 37-40 4
+        # 23-26 0
+        # 27-30 1
+        # 31-34 2
+        # 35-38 3
+        # 39-42 4
         for i in range(5):    # do this 5 times - one for each colour
             for j in range(4):
                 read_regs.append(fsm.colours[i][j*8:j*8+8])

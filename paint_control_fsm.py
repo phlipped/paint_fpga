@@ -47,6 +47,7 @@ class PaintControlFSM(Elaboratable):
             self.motor_enables.append(motor_enable)
 
         self.steps = Signal()
+        self.pulser = Pwm(16)
 
 
     def elaborate(self, platform):
@@ -57,10 +58,10 @@ class PaintControlFSM(Elaboratable):
             m.d.comb += self.motor_enables[i].direction.eq(self.control.direction)
 
         # Pulse generator used to drive the step signal
-        pulser = Pwm(16)
-        pulser.o = self.steps
-        m.submodules.pulser = pulser
-        m.d.comb += pulser.invert.eq(1)
+
+        self.pulser.o = self.steps
+        m.submodules.pulser = self.pulser
+        m.d.comb += self.pulser.invert.eq(1)
 
         # Clock domain for "step_signal".
         # In READY state, this domain is synced to the 'sync' clock domain so
@@ -111,10 +112,10 @@ class PaintControlFSM(Elaboratable):
 
                 # FIXME do this properly - ie calculate values appropriately or something
                 # load some basic values into pwm module
-                m.d.sync += [
-                    pulser.top.eq(100),
-                    pulser.match.eq(16),
-                ]
+                # m.d.sync += [
+                #    pulser.top.eq(100),
+                #    pulser.match.eq(16),
+                # ]
 
                 # Assign the incoming color values to corresponding writable registers
                 # Do this on the step clock, which is currently bound to the sync
@@ -137,7 +138,7 @@ class PaintControlFSM(Elaboratable):
 
             with m.State("DISPENSING_PREP"):
                 # Switch step_signal clock source to the pulser output
-                m.d.comb += step_signal.clk.eq(pulser.o)
+                m.d.comb += step_signal.clk.eq(self.pulser.o)
 
                 # Turn on the enable line of any motor which has non-zero steps
                 for i, e in enumerate(self.motor_enables):
@@ -152,10 +153,10 @@ class PaintControlFSM(Elaboratable):
             # - DONE
             with m.State("DISPENSING"):
                 # continue driving step_signal from pulser module
-                m.d.comb += step_signal.clk.eq(pulser.o)
+                m.d.comb += step_signal.clk.eq(self.pulser.o)
 
                 # start the pulser module
-                m.d.sync += pulser.active.eq(1)
+                m.d.sync += self.pulser.active.eq(1)
 
                 # Enable the motors for colours that have steps,
                 # and turn them off when the step count for the colour hits 0
@@ -166,7 +167,7 @@ class PaintControlFSM(Elaboratable):
                         # after the pulse goes low. But I'm guessing the stepper
                         # motor driver won't care - it's probably already done
                         # the step after the rising edge, right?
-                        with m.If(pulser.o == 0):
+                        with m.If(self.pulser.o == 0):
                             m.d.sync += self.motor_enables[i].enable_i.eq(0)
                     with m.Else():
                         m.d.sync += self.motor_enables[i].enable_i.eq(1)
@@ -192,7 +193,7 @@ class PaintControlFSM(Elaboratable):
                         # If all colours are 0, go to DONE
                         with m.If(functools.reduce(operator.or_, self.colours) == 0):
                             # wait for final pulse to compete
-                            with m.If(pulser.o == 0):
+                            with m.If(self.pulser.o == 0):
                                 m.next = "DONE"
 
             # HOME
