@@ -17,10 +17,22 @@ class PaintControlBoard(Elaboratable):
         paint_control = PaintControl()
 
         platform_spi = platform.request("spi")
+
+        # synchronise the SPI signals through some flip flops ...
+        spi_clk_sync = Signal(3)
+        spi_ss_sync = Signal(3)
+        spi_mosi_sync = Signal(3)
+
+        m.d.sync += [
+            spi_clk_sync.eq(Cat(platform_spi.clk, spi_clk_sync[:-1])),
+            spi_ss_sync.eq(Cat(platform_spi.ss, spi_ss_sync[:-1])),
+            spi_mosi_sync.eq(Cat(platform_spi.mosi, spi_mosi_sync[:-1])),
+        ]
+
         m.d.comb += [
-            paint_control.spi_clk.eq(platform_spi.clk),
-            paint_control.ss.eq(platform_spi.ss),
-            paint_control.mosi.eq(platform_spi.mosi),
+            paint_control.spi_clk.eq(spi_clk_sync[-1]),
+            paint_control.ss.eq(spi_ss_sync[-1]),
+            paint_control.mosi.eq(spi_ss_sync[-1]),
             platform_spi.miso.eq(paint_control.miso),
 
             platform.request("direction").eq(paint_control.direction),
@@ -29,10 +41,19 @@ class PaintControlBoard(Elaboratable):
 
         for i in range(5):
             motor_signals = platform.request("motor_signals", i)
+
+            limit_top_sync = Signal(3)
+            limit_bottom_sync = Signal(3)
+
+            m.d.sync += [
+                limit_top_sync.eq(Cat(motor_signals.limit_top, limit_top_sync[:-1])),
+                limit_bottom_sync.eq(Cat(motor_signals.limit_bottom, limit_bottom_sync[:-1])),
+            ]
+
             m.d.comb += [
                 motor_signals.enable_o.eq(paint_control.motor_signals[i].enable_o),
-                paint_control.motor_signals[i].limit_top.eq(motor_signals.limit_top),
-                paint_control.motor_signals[i].limit_bottom.eq(motor_signals.limit_bottom),
+                paint_control.motor_signals[i].limit_top.eq(limit_top_sync),
+                paint_control.motor_signals[i].limit_bottom.eq(limit_bottom_sync),
             ]
 
         m.submodules += paint_control
