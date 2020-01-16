@@ -9,31 +9,30 @@ from spi import *
 
 class PaintControl(Elaboratable):
     """
-THE FOLLOWING DOCSTIRNG IS INCORRECT - ENERALLY IGNORE IT, AND RECREATE PROPERLY
---------------------------------
 Controlled by a number of configuation and status registers.
 These are readable/writable by SPI
 
 Each register is 8 bits
 
-Registers 0 through 24 are 5 lots of 5-register modules relating to the motors
-0: Motor Step Count Lower
-1: Motor Step Count Higher
-2: Motor Status - limit_top, limit_bottom
+R0 is control register with following bits:
+0  : reset
+1-2: mode - 00 means nothing, 10 means 'dispense', 01 means 'home' and 11 is illegal
+3  : direction - 0 means down, 1 means up
+4-7: <reserved>
 
-25: General Control register
-25.0: start/stop - set 0 to stop things, set to 1 to make things go
-25.1: 0 = Dispense mode, 1 = Home mode
-25.2: Clear error state - return to Ready state
+R1 and R2 are two halves 16-bit "TOP" register of PWM module
+Controls the maximum value of PWM counter that controls step rate
 
-26: Status Register (Read only)
-26.0: Active flag - are things moving right now?
-26.1: Current mode: 0 = Dispense, 1 = Home mode
-26.2: In Error
-26.3: Error type - 0 Protocol error, 1 Hardware error
+R3 and R4 are two halves of 16-bit "MATCH" register of PWM module
+Controls when the PWM signal switches from high to low
 
-27: Max Speed control register
-28: Ramp up speed control register
+R5-R8 are for 32 bit color[0] desired step count
+R9-R12 " " " " " " " " " " 1 " " " " " " " " " "
+R13-R16  " " " " " " " " " 2 " " " " " " " " " "
+R17-R20  " " " " " " " " " 3 " " " " " " " " " "
+R21-R24  " " " " " " " " " 4 " " " " " " " " " "
+
+R25-R44 same deal, 5 lots of 4 byte registers that show CURRENT step count. READ ONLY
 -------------------------------
     """
     def __init__(self):
@@ -91,22 +90,22 @@ Registers 0 through 24 are 5 lots of 5-register modules relating to the motors
         write_regs.append(fsm.pulser.top[8:16])
 
         # Add colours_in to regs as 4 8-bit writable registers
-        # 3-6 -> colour0_in
-        # 7-10 -> colour1_in
-        # 11-14 -> colour2_in
-        # 15-18 -> colour3_in
-        # 19-22 -> colour4_in
+        # 5-8 -> colour0_in
+        # 9-12 -> colour1_in
+        # 13-16 -> colour2_in
+        # 17-20 -> colour3_in
+        # 21-24 -> colour4_in
         for i in range(5):
             for j in range(4):
                 read_regs.append(fsm.colours_in[i][j*8:j*8+8])
                 write_regs.append(fsm.colours_in[i][j*8:j*8+8])
 
         # Same deal for read-only colours registers
-        # 23-26 0
-        # 27-30 1
-        # 31-34 2
-        # 35-38 3
-        # 39-42 4
+        # 25-28 0
+        # 29-32 1
+        # 33-36 2
+        # 37-40 3
+        # 41-44 4
         for i in range(5):    # do this 5 times - one for each colour
             for j in range(4):
                 read_regs.append(fsm.colours[i][j*8:j*8+8])
