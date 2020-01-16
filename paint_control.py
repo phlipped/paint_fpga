@@ -50,6 +50,7 @@ Registers 0 through 24 are 5 lots of 5-register modules relating to the motors
             ])
             self.motor_signals.append(r)
         self.steps = Signal()
+        self.direction = Signal()
 
     def elaborate(self, platform):
         m = Module()
@@ -63,8 +64,9 @@ Registers 0 through 24 are 5 lots of 5-register modules relating to the motors
             fsm.motor_enables[i].limit_top = r.limit_top
             fsm.motor_enables[i].limit_bottom = r.limit_bottom
 
-        # wire up the step signal
+        # wire up the step signal and direction signal
         self.fsm.steps = self.steps
+        self.fsm.control.direction = self.direction
 
         read_regs = Array()
         write_regs = Array()
