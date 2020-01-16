@@ -96,7 +96,7 @@ Registers 0 through 24 are 5 lots of 5-register modules relating to the motors
                 read_regs.append(fsm.colours[i][j*8:j*8+8])
 
         # FIXME add in the motor signals as read-only registers
-        # FIXME create a status register in paint_control_fsm, then link to it here
+        # FIXME create a status register in paint_control_fsm, then add it in as a read-only register here
 
         spi_reg_if = SpiRegIf(read_regs, write_regs)
         # wire up the spi signals
