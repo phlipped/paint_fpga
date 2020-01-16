@@ -18,7 +18,7 @@ class PaintControlFSM(Elaboratable):
         ])
 
         # == error ==
-        # Read-only from outside
+        # Read-only
         # In error state, this is populated with a value
         # It is cleared when entering READY state
         # FIXME implement
