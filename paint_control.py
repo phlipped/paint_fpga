@@ -89,6 +89,11 @@ R25-R44 same deal, 5 lots of 4 byte registers that show CURRENT step count. READ
         write_regs.append(fsm.pulser.top[0:8])
         write_regs.append(fsm.pulser.top[8:16])
 
+        read_regs.append(fsm.pulser.match[0:8])
+        read_regs.append(fsm.pulser.match[8:16])
+        write_regs.append(fsm.pulser.match[0:8])
+        write_regs.append(fsm.pulser.match[8:16])
+
         # Add colours_in to regs as 4 8-bit writable registers
         # 5-8 -> colour0_in
         # 9-12 -> colour1_in
@@ -109,6 +114,8 @@ R25-R44 same deal, 5 lots of 4 byte registers that show CURRENT step count. READ
         for i in range(5):    # do this 5 times - one for each colour
             for j in range(4):
                 read_regs.append(fsm.colours[i][j*8:j*8+8])
+                dummy = Signal(8)
+                write_regs.append(dummy)
 
         # FIXME add in the motor signals as read-only registers
         # FIXME create a status register in paint_control_fsm, then add it in as a read-only register here
