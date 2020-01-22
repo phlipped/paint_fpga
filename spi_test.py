@@ -46,14 +46,14 @@ class SpiCoreTest(FHDLTestCase):
             while True:
                 yield
                 miso_out.append((yield self.dut.miso))
-        sim.add_sync_process(record_miso_process, domain='spi_falling')
+        sim.add_sync_process(record_miso_process, domain='spi_rising')
         def process():
             yield Delay(1e-8)
             yield self.dut.ss.eq(0)
             yield Delay(1e-8)
             for i in range(words_to_test):
                 # wait for o_count to be non-zero - this means we're ready to load o_reg
-                while ((yield self.dut.out_count) != 0):
+                while ((yield self.dut.count) != 0):
                     yield Delay(1e-08)
 
                 bits = bit_pattern[i*self.width:i*self.width + self.width]
@@ -61,23 +61,23 @@ class SpiCoreTest(FHDLTestCase):
                 yield self.dut.o_reg.eq(val)
 
                 # wait for o_count to be 0 - this means our value has been loaded
-                while ((yield self.dut.out_count) == 0):
+                while ((yield self.dut.count) == 0):
                     yield Delay(1e-08)
 
             # wait for o_count to be non-zero - that means it's started being pumped out
-            while ((yield self.dut.out_count) != 0):
+            while ((yield self.dut.count) != 0):
                 yield Delay(1e-08)
 
             # wait for zero - that means it's finished being pumped out
-            while ((yield self.dut.out_count) == 0):
+            while ((yield self.dut.count) == 0):
                 yield Delay(1e-08)
 
             # wait for o_count to be non-zero - that means it's started being pumped out
-            while ((yield self.dut.out_count) != 0):
+            while ((yield self.dut.count) != 0):
                 yield Delay(1e-08)
 
             # wait for zero - that means it's finished being pumped out
-            while ((yield self.dut.out_count) == 0):
+            while ((yield self.dut.count) == 0):
                 yield Delay(1e-08)
         sim.add_process(process)
         with sim.write_vcd(

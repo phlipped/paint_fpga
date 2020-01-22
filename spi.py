@@ -35,8 +35,8 @@ class SpiCore(Elaboratable):
 
         self.i_reg = Signal(width)
         self.o_reg = Signal(width)
-        self.in_count = Signal(range(0, width))
-        self.out_count = Signal(range(0, width))
+        self._o_reg = Signal(self.o_reg.width)
+        self.count = Signal(range(0, width))  # counts number of bits sent/received
         self.read_ready = Signal()
 
     def elaborate(self, platform):
@@ -54,7 +54,6 @@ class SpiCore(Elaboratable):
         # This is the actual shift register that delivers data to miso
         # It is loaded from o_reg when the last bit of the previous value
         # is shifted out onto the miso line.
-        _o_reg = Signal(self.o_reg.width)
 
         # These are needed to overcome a bug in the nmigen simulator where
         # un-driven signals aren't included in the VCD file.
@@ -72,23 +71,29 @@ class SpiCore(Elaboratable):
             # shift from mosi into i_reg
             m.d.spi_rising += [o.eq(i) for i, o in zip((self.mosi, *self.i_reg), self.i_reg)]
 
-            # increment in_count, wrapping as necessary
-            with m.If(self.in_count == self.i_reg.width - 1): # if: count is currently 1 less than i_reg width
+            # increment count, wrapping as necessary
+            with m.If(self.count == self.i_reg.width - 1): # if: count was 1 less than i_reg width
                                                               #     then we just received the last bit, so ...
-                m.d.spi_rising += [self.read_ready.eq(1),     #     set read_ready
-                                   self.in_count.eq(0)]       #     reset in_count to 0
+                m.d.spi_rising += [
+                    self.read_ready.eq(1),                    #     set read_ready
+                    self.count.eq(0),                      #     reset count to 0
+                ]
             with m.Else():                                    # else: we aren't at the last bit
-                m.d.spi_rising += [self.read_ready.eq(0),     #     so ensure read_ready is 0
-                                   self.in_count.eq(self.in_count + 1)]  # and increment in_count
+                m.d.spi_rising += [
+                    self.read_ready.eq(0),                    #     so ensure read_ready is 0
+                    self.count.eq(self.count + 1)       #     and increment count
+                ]
 
-            m.d.spi_falling += self.miso.eq(_o_reg[-1])
 
-            with m.If(self.out_count == self.o_reg.width - 1):
-                m.d.spi_falling += [self.out_count.eq(0),
-                                    _o_reg.eq(self.o_reg)]
+            # bind miso to the last bit of _o_reg
+            m.d.comb += self.miso.eq(self._o_reg[-1])
+
+            with m.If(self.count == 0):
+                m.d.spi_falling += [
+                    self._o_reg.eq(self.o_reg),
+                ]
             with m.Else():
-                m.d.spi_falling += self.out_count.eq(self.out_count + 1)
-                m.d.spi_falling += [o.eq(i) for i, o in zip((0, *_o_reg), _o_reg)]
+                m.d.spi_falling += [o.eq(i) for i, o in zip((0, *self._o_reg), self._o_reg)]
         return m
 
 class SpiRegIf(Elaboratable):
