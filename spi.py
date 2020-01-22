@@ -99,9 +99,14 @@ class SpiCore(Elaboratable):
 class SpiRegIf(Elaboratable):
     '''
     Args:
-      regs: a list of (Signal(), int). Addresses are assigned to the registers
-      0 indexed in the order they appear in the list. The int indicates whether
-      or not the register is writable (1 means read/write, 0 means read only)
+      read_regs: an indexable collection of Signals. Addresses (0 indexed) are assigned to the registers
+      in the order they appear in the list.
+
+      write_regs: an indexable collection of Signals. Addresses (0 indexed) are assigned to the registers
+      in the order they appear in the list. The same register can be present in read_regs and write_regs.
+      The addressing domain of each collection is separate - address 0 in read_regs is different to
+      address 0 in write_regs, although you can arrange for a single address to identify the same
+      register by adding the register in the same index in each list.
 
       Writable registers cannot be driven by any other modules - SpiRegIf module
       takes ownership of setting the value in these registers.
@@ -117,6 +122,8 @@ class SpiRegIf(Elaboratable):
         self.read_regs = read_regs
         self.write_regs = write_regs
 
+        self.addr = Signal(self.spi_width)
+
     def elaborate(self, platform):
         m = Module()
 
@@ -127,19 +134,17 @@ class SpiRegIf(Elaboratable):
         spi_core.miso = self.miso
         m.submodules += spi_core
 
-        self.addr = Signal(self.spi_width)
-
         # nmigen simulator bug
-        self.spi_clk2 = Signal()
-        self.ss2 = Signal()
-        self.mosi2 = Signal()
+        #self.spi_clk2 = Signal()
+        #self.ss2 = Signal()
+        #self.mosi2 = Signal()
         #self.read_regs2 = Array([Signal(len(r)) for r in self.read_regs])
         #self.write_regs2 = Array([Signal(len(r)) for r in self.write_regs])
-        m.d.comb += [
-            self.spi_clk2.eq(self.spi_clk),
-            self.ss2.eq(self.ss),
-            self.mosi2.eq(self.mosi),
-        ]
+        #m.d.comb += [
+        #    self.spi_clk2.eq(self.spi_clk),
+        #    self.ss2.eq(self.ss),
+        #    self.mosi2.eq(self.mosi),
+        #]
         #m.d.comb += [o.eq(i) for i, o in zip(self.read_regs, self.read_regs2)]
         #m.d.comb += [o.eq(i) for i, o in zip(self.write_regs, self.write_regs2)]
 
@@ -153,7 +158,7 @@ class SpiRegIf(Elaboratable):
                     # Store the remaining bits of i_reg in addr
                     # The MSB indicates read or write, so we remove it and
                     # replace it with a zero
-                    m.d.sync += self.addr.eq(Cat(spi_core.i_reg[:-1], 0))
+                    m.d.sync += self.addr.eq(spi_core.i_reg & 0b01111111)
                     with m.If(spi_core.i_reg[-1] == 0):
                         m.next = "HANDLE_READ"
                     with m.Else():
