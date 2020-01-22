@@ -32,7 +32,7 @@ class PaintControlBoard(Elaboratable):
         m.d.comb += [
             paint_control.spi_clk.eq(spi_clk_sync[-1]),
             paint_control.ss.eq(spi_ss_sync[-1]),
-            paint_control.mosi.eq(spi_ss_sync[-1]),
+            paint_control.mosi.eq(spi_mosi_sync[-1]),
             platform_spi.miso.eq(paint_control.miso),
 
             platform.request("direction").eq(paint_control.direction),
