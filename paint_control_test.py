@@ -19,48 +19,38 @@ class PaintControlTest(FHDLTestCase):
             yield self.dut.mosi.eq(b)
             yield from self.pump_spi_clk()
 
-    def send_read_addr(self, addr):
+    def spi_read(self, addr):
         addr_as_list_of_7_bits = number_to_bit_list(addr, 7)
         yield from self.send_mosi_bits([0] + addr_as_list_of_7_bits)
 
-    def send_write_addr_val(self, addr, val):
+    def spi_write(self, addr, val):
         addr_as_list_of_7_bits = number_to_bit_list(addr, 7)
         mosi_bits = [1] + addr_as_list_of_7_bits
         yield from self.send_mosi_bits(mosi_bits)
         val_as_list_of_8_bits = number_to_bit_list(val, 8)
         yield from self.send_mosi_bits(val_as_list_of_8_bits)
 
-    def test0(self):
+    def test_colour0_15_steps_down(self):
         sim = Simulator(fragment=self.dut)
         sim.add_clock(1/16000000)
         def process():
             yield
             yield
-        sim.add_sync_process(process)
-        with sim.write_vcd(
-            "test_output/paint_control_test0.vcd",
-            "test_output/paint_control_test0.gtkw"):
-            sim.run()
-
-    def test1(self):
-        sim = Simulator(fragment=self.dut)
-        sim.add_clock(1/16000000)
-        def process():
             yield
             yield self.dut.ss.eq(0)
             yield
-            yield from self.send_write_addr_val(1, 0x10)
-            yield from self.send_write_addr_val(2, 0x00)
-            yield from self.send_write_addr_val(3, 0x00)
-            yield from self.send_write_addr_val(4, 0x00)
-            yield from self.send_write_addr_val(0, 0x02)
-            yield Delay(7e-5)
-            yield self.dut.fsm.motor_enables[0].limit_top.eq(1)
-            yield Delay(1e-4)
+            yield from self.spi_write(2, 320) # PWM TOP Low Byte = 20 us
+            yield from self.spi_write(4, 16) # PWM MATCH Low Byte - 16 = 1us
+            yield from self.spi_write(6, 15)   # Colour 0 Lowest Byte
+            yield from self.spi_write(10, 10)   # Colour 1 lowest byte
+            yield from self.spi_write(1, 0b00000010) # DISPENSING MODE
+            yield Delay(2e-4)
+            yield from self.spi_write(1, 0x01) # Reset
+            yield from self.spi_write(1, 0x00) # Un-reset
         sim.add_sync_process(process)
         with sim.write_vcd(
-            "test_output/paint_control_test1.vcd",
-            "test_output/paint_control_test1.gtkw"):
+            "test_output/paint_control_test_colour0_15_steps_down.vcd",
+            "test_output/paint_control_test_colour0_15_steps_down.gtkw"):
             sim.run()
 
 

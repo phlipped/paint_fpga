@@ -57,6 +57,8 @@ R25-R44 same deal, 5 lots of 4 byte registers that show CURRENT step count. READ
         self.fsm = fsm = PaintControlFSM()
         m.submodules += fsm
 
+        dummy_write = Signal(8)
+
         # wire up the motor enable signals
         for i, r in enumerate(self.motor_signals):
             fsm.motor_enables[i].enable_o = r.enable_o
@@ -69,7 +71,17 @@ R25-R44 same deal, 5 lots of 4 byte registers that show CURRENT step count. READ
 
         read_regs = Array()
         write_regs = Array()
-        # reg 0 -> control
+
+        # reg 0 -> status
+        # read only
+        status_as_signal = Cat(
+            fsm.status.fsm_state,
+            fsm.status.error_code,
+        )
+        read_regs.append(status_as_signal)
+        write_regs.append(dummy_write)
+
+        # reg 1 -> control
         # FIXME not sure why I have to do make a control_as_signal thing, but trying to use
         # fsm.control directly as a register in an Array doesn't work - a Record
         # can't be used as a key in value collections. I'm not sure why it needs
@@ -81,6 +93,7 @@ R25-R44 same deal, 5 lots of 4 byte registers that show CURRENT step count. READ
             fsm.control.direction,
             fsm.control.reserved
         )
+
         read_regs.append(control_as_signal)
         write_regs.append(control_as_signal)
 
@@ -95,27 +108,26 @@ R25-R44 same deal, 5 lots of 4 byte registers that show CURRENT step count. READ
         write_regs.append(fsm.pulser.match[8:16])
 
         # Add colours_in to regs as 4 8-bit writable registers
-        # 5-8 -> colour0_in
-        # 9-12 -> colour1_in
-        # 13-16 -> colour2_in
-        # 17-20 -> colour3_in
-        # 21-24 -> colour4_in
+        # 6-9 -> colour0_in
+        # 10-13 -> colour1_in
+        # 14-17 -> colour2_in
+        # 18-21 -> colour3_in
+        # 22-25 -> colour4_in
         for i in range(5):
             for j in range(4):
                 read_regs.append(fsm.colours_in[i][j*8:j*8+8])
                 write_regs.append(fsm.colours_in[i][j*8:j*8+8])
 
         # Same deal for read-only colours registers
-        # 25-28 0
-        # 29-32 1
-        # 33-36 2
-        # 37-40 3
-        # 41-44 4
+        # 26-29 0
+        # 30-33 1
+        # 34-37 2
+        # 38-41 3
+        # 42-45 4
         for i in range(5):    # do this 5 times - one for each colour
             for j in range(4):
                 read_regs.append(fsm.colours[i][j*8:j*8+8])
-                dummy = Signal(8)
-                write_regs.append(dummy)
+                write_regs.append(dummy_write)
 
         # FIXME add in the motor signals as read-only registers
         # FIXME create a status register in paint_control_fsm, then add it in as a read-only register here

@@ -4,7 +4,7 @@ class MotorEnable(Elaboratable):
     def __init__(self):
         self.limit_top = Signal() # 1 means it's been hit, 0 means not hit
         self.limit_bottom = Signal() # 1 means it's been hit, 0 means ok
-        self.limit_for_direction = Signal() # Represents the limit in the relevant direction
+        self.limit_for_direction = Signal() # multiplex between the two limit signals based on the value of direction
         self.direction = Signal() # 1 means 'down', 0 means 'up'
         self.enable_i = Signal() # incoming enable signal from paint controller
         self.enable_o = Signal() # outgoing enable signal to motors

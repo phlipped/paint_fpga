@@ -6,8 +6,25 @@ from nmigen import *
 from motor_enable import MotorEnable
 from pwm import Pwm
 
+FSM_STATE_ID = {
+    'START': 0,
+    'READY': 1,
+    'DISPENSING_PREP': 2,
+    'DISPENSING': 5,
+    'HOMING': 3,  # Not confirmed that this is thae same as in gtkwave file
+    'DONE': 6,
+    'ERROR': 4,   # Not confirmed that this is thae same as in gtkwave file
+}
+
 class PaintControlFSM(Elaboratable):
     def __init__(self):
+        # == status ==
+        # Read Only
+        self.status = Record(layout=[
+            ("fsm_state", 4),
+            ("error_code", 4),
+        ])
+
         # == control ==:
         # Writeable
         self.control = Record(layout=[
@@ -90,6 +107,8 @@ class PaintControlFSM(Elaboratable):
             # - ERROR -> if POST fails (e.g. end stop switches are bad)
             with m.State("START"):
                 # FIXME actually implement POST - e.g. check the limit switches are happy
+                m.d.sync += self.status.fsm_state.eq(FSM_STATE_ID['START'])
+                m.d.sync += self.pulser.active.eq(0)
                 with m.If(self.control.reset == 0):
                     m.next = "READY"
 
@@ -108,6 +127,7 @@ class PaintControlFSM(Elaboratable):
                 # If the mode bits == 'DISPENSING', go to dispensing mode
                 # If the mode bits == 'HOMING', go to homing mode
 
+                m.d.sync += self.status.fsm_state.eq(FSM_STATE_ID['READY'])
                 m.d.comb += step_signal.clk.eq(ClockSignal('sync'))
 
                 # FIXME do this properly - ie calculate values appropriately or something
@@ -138,44 +158,42 @@ class PaintControlFSM(Elaboratable):
 
             with m.State("DISPENSING_PREP"):
                 # Switch step_signal clock source to the pulser output
+                m.d.sync += self.status.fsm_state.eq(FSM_STATE_ID['DISPENSING_PREP'])
                 m.d.comb += step_signal.clk.eq(self.pulser.o)
 
                 # Turn on the enable line of any motor which has non-zero steps
                 for i, e in enumerate(self.motor_enables):
-                    with m.If (self.colours[i] != 0):
+                    with m.If(self.colours[i] != 0):
                         m.d.sync += e.enable_i.eq(1)
                 m.next = "DISPENSING"
 
-            # DISPENSE
+            # DISPENSING
             # next states are
             # - START
             # - ERROR
             # - DONE
             with m.State("DISPENSING"):
+                m.d.sync += self.status.fsm_state.eq(FSM_STATE_ID['DISPENSING'])
                 # continue driving step_signal from pulser module
                 m.d.comb += step_signal.clk.eq(self.pulser.o)
 
                 # start the pulser module
                 m.d.sync += self.pulser.active.eq(1)
 
-                # Enable the motors for colours that have steps,
-                # and turn them off when the step count for the colour hits 0
-                for i, c in enumerate(self.colours):
-                    with m.If(c == 0):
-                        # Wait until pulser is zero.
-                        # This is a bit hacky - ideally we should wait for 1us
-                        # after the pulse goes low. But I'm guessing the stepper
-                        # motor driver won't care - it's probably already done
-                        # the step after the rising edge, right?
-                        with m.If(self.pulser.o == 0):
-                            m.d.sync += self.motor_enables[i].enable_i.eq(0)
-                    with m.Else():
-                        m.d.sync += self.motor_enables[i].enable_i.eq(1)
-
                 with m.If(self.control.reset):
                     m.next = "START"
 
                 with m.Else():
+                    # Disable motors for colours that reach 0
+                    for i, c in enumerate(self.colours):
+                        with m.If(c == 0):
+                            # Wait until pulser is zero.
+                            # This is a bit hacky - ideally we should wait for 1us
+                            # after the pulse goes low. But I'm guessing the stepper
+                            # motor driver won't care - it's probably already done
+                            # the step after the rising edge, right?
+                            with m.If(self.pulser.o == 0):
+                                m.d.sync += self.motor_enables[i].enable_i.eq(0)
                     # If a motor went wrong, then go to ERROR
                     # determine if any limits were hit - store result in any_limit_hit
                     limit_hits = [self.motor_enables[i].limit_for_direction & self.colours[i] != 0
@@ -201,6 +219,7 @@ class PaintControlFSM(Elaboratable):
             # - READY
             # - ERROR
             with m.State("HOMING"):
+                m.d.sync += self.status.fsm_state.eq(FSM_STATE_ID['HOMING'])
                 with m.If(self.control.reset):
                     m.next = "START"
 
@@ -212,7 +231,9 @@ class PaintControlFSM(Elaboratable):
             # next states are:
             # - START
             with m.State("DONE"):
-                # FIXME set a status value somewhere?
+                m.d.sync += self.status.fsm_state.eq(FSM_STATE_ID['DONE'])
+                # Turn off the pulser
+                m.d.sync +=self.pulser.active.eq(0)
                 with m.If(self.control.reset):     # If CANCEL bit is set, go back to START
                     m.next = "START"
 
@@ -223,6 +244,7 @@ class PaintControlFSM(Elaboratable):
             # - START
             # FIXME could probably just be folded into "DONE" state?
             with m.State("ERROR"):
+                m.d.sync += self.status.fsm_state.eq(FSM_STATE_ID['ERROR'])
                 with m.If(self.control.reset):
                     m.next = "START"
 
