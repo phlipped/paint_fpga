@@ -164,7 +164,7 @@ class PaintControlFSM(Elaboratable):
                 # Turn on the enable line of any motor which has non-zero steps
                 for i, e in enumerate(self.motor_enables):
                     with m.If(self.colours[i] != 0):
-                        m.d.sync += e.enable_i.eq(1)
+                        m.d.sync += e.enable_i.eq(0)
                 m.next = "DISPENSING"
 
             # DISPENSING
@@ -193,7 +193,7 @@ class PaintControlFSM(Elaboratable):
                             # motor driver won't care - it's probably already done
                             # the step after the rising edge, right?
                             with m.If(self.pulser.o == 0):
-                                m.d.sync += self.motor_enables[i].enable_i.eq(0)
+                                m.d.sync += self.motor_enables[i].enable_i.eq(1)
                     # If a motor went wrong, then go to ERROR
                     # determine if any limits were hit - store result in any_limit_hit
                     limit_hits = [self.motor_enables[i].limit_for_direction & self.colours[i] != 0

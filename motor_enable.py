@@ -6,8 +6,8 @@ class MotorEnable(Elaboratable):
         self.limit_bottom = Signal() # 1 means it's been hit, 0 means ok
         self.limit_for_direction = Signal() # multiplex between the two limit signals based on the value of direction
         self.direction = Signal() # 1 means 'down', 0 means 'up'
-        self.enable_i = Signal() # incoming enable signal from paint controller
-        self.enable_o = Signal() # outgoing enable signal to motors
+        self.enable_i = Signal(reset=1) # incoming enable signal from paint controller, active low
+        self.enable_o = Signal(reset=1) # outgoing enable signal to motors, active low
 
         # For testing purposes only
         self.dummy = Signal()
@@ -28,13 +28,13 @@ class MotorEnable(Elaboratable):
             self.direction2.eq(self.direction),
         ]
 
-        with m.If(self.direction == 1): # 1 means down
+        with m.If(self.direction == 1): # 1 means down, errr I think
             m.d.comb += self.limit_for_direction.eq(self.limit_bottom)
         with m.Else():
             m.d.comb += self.limit_for_direction.eq(self.limit_top)
 
         with m.If(self.limit_for_direction == 1):
-            m.d.comb += self.enable_o.eq(0)
+            m.d.comb += self.enable_o.eq(1)
         with m.Else():
             m.d.comb += self.enable_o.eq(self.enable_i)
 

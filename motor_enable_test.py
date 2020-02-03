@@ -18,9 +18,6 @@ class MoterEnableTest(FHDLTestCase):
                 for dir, limit in [(1, self.dut.limit_bottom), (0, self.dut.limit_top)]:
                     yield self.dut.direction.eq(dir)     # down
                     yield limit.eq(0)
-                    yield self.dut.enable_i.eq(1)
-                    yield
-                    assert (yield self.dut.enable_o == 1)
                     yield self.dut.enable_i.eq(0)
                     yield
                     assert (yield self.dut.enable_o == 0)
@@ -30,18 +27,21 @@ class MoterEnableTest(FHDLTestCase):
                     yield self.dut.enable_i.eq(0)
                     yield
                     assert (yield self.dut.enable_o == 0)
+                    yield self.dut.enable_i.eq(1)
+                    yield
+                    assert (yield self.dut.enable_o == 1)
                     yield limit.eq(1)
-                    yield self.dut.enable_i.eq(1)
-                    yield
-                    assert (yield self.dut.enable_o == 0)
                     yield self.dut.enable_i.eq(0)
                     yield
-                    assert (yield self.dut.enable_o == 0)
+                    assert (yield self.dut.enable_o == 1)
                     yield self.dut.enable_i.eq(1)
                     yield
-                    assert (yield self.dut.enable_o == 0)
+                    assert (yield self.dut.enable_o == 1)
                     yield self.dut.enable_i.eq(0)
                     yield
-                    assert (yield self.dut.enable_o == 0)
+                    assert (yield self.dut.enable_o == 1)
+                    yield self.dut.enable_i.eq(1)
+                    yield
+                    assert (yield self.dut.enable_o == 1)
             sim.add_sync_process(process())
             sim.run()
